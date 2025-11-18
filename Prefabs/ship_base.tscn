@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3 uid="uid://34k6p0sf0lb"]
+
+[ext_resource type="Script" uid="uid://dqpumu4uhdvi0" path="res://Scripts/ship_generator_and_controller.gd" id="1_eidlh"]
+
+[node name="ShipBase" type="Node3D"]
+transform = Transform3D(1, 0, 0, 0, 0.965926, -0.258819, 0, 0.258819, 0.965926, 0, 0, 0)
+script = ExtResource("1_eidlh")
+
+[node name="PlayerBox" type="Node3D" parent="."]
+
+[node name="RoomBox" type="Node3D" parent="."]
+
+[node name="Corridor" type="GridMap" parent="."]
+
+[node name="Marker3D" type="Marker3D" parent="."]

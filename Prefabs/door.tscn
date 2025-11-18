@@ -1,0 +1,108 @@
+[gd_scene load_steps=15 format=3 uid="uid://d2mkpvcj3gfec"]
+
+[ext_resource type="PackedScene" uid="uid://tgowjnugplet" path="res://Workshop/Imports/Blender/Door.glb" id="1_bp8im"]
+[ext_resource type="Script" uid="uid://df1xybkhm47gq" path="res://Scripts/door.gd" id="2_0i76c"]
+[ext_resource type="Script" uid="uid://ck3jh2fx4e5x1" path="res://Prefabs/CompletedFeatures/Interaction/Interactable.gd" id="3_0i76c"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_kvppq"]
+size = Vector3(0.1, 0.9, 0.4)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_wsr4k"]
+size = Vector3(0.1, 0.9, 0.4)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_85gag"]
+size = Vector3(0.1, 0.4, 0.8)
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_peowp"]
+animation = &"DoorClose"
+
+[sub_resource type="AnimationNodeAnimation" id="AnimationNodeAnimation_luo53"]
+animation = &"DoorOpen"
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_y4xfk"]
+advance_mode = 2
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_i1pql"]
+switch_mode = 2
+
+[sub_resource type="AnimationNodeStateMachineTransition" id="AnimationNodeStateMachineTransition_r7mhl"]
+switch_mode = 2
+
+[sub_resource type="AnimationNodeStateMachine" id="AnimationNodeStateMachine_ful1q"]
+states/DoorClose/node = SubResource("AnimationNodeAnimation_peowp")
+states/DoorClose/position = Vector2(441, -9)
+states/DoorOpen/node = SubResource("AnimationNodeAnimation_luo53")
+states/DoorOpen/position = Vector2(441, 150)
+states/Start/position = Vector2(219, 86)
+transitions = ["Start", "DoorClose", SubResource("AnimationNodeStateMachineTransition_y4xfk"), "DoorClose", "DoorOpen", SubResource("AnimationNodeStateMachineTransition_i1pql"), "DoorOpen", "DoorClose", SubResource("AnimationNodeStateMachineTransition_r7mhl")]
+graph_offset = Vector2(-78, -30)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_peowp"]
+size = Vector3(0.3, 0.3, 0.3)
+
+[sub_resource type="BoxMesh" id="BoxMesh_luo53"]
+size = Vector3(0.3, 0.3, 0.3)
+
+[node name="Door" instance=ExtResource("1_bp8im")]
+script = ExtResource("2_0i76c")
+
+[node name="Skeleton3D" parent="DoorSkeleton" index="0"]
+bones/0/position = Vector3(0, 0.822993, -0.613614)
+bones/2/position = Vector3(0.00865838, 0.856758, 1.71428)
+bones/4/position = Vector3(-1.95399e-14, 2.86048, 0.475399)
+
+[node name="RightSide" parent="DoorSkeleton/Skeleton3D" index="0"]
+transform = Transform3D(2.09538, 0, 0, 0, 2.09538, -4.95464e-07, 0, 5.02914e-07, 2.09538, 0, 0.862806, 0.538317)
+
+[node name="StaticBody3D" type="StaticBody3D" parent="DoorSkeleton/Skeleton3D/RightSide/RightSide" index="0"]
+collision_layer = 12
+collision_mask = 9
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DoorSkeleton/Skeleton3D/RightSide/RightSide/StaticBody3D" index="0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, -0.2)
+shape = SubResource("BoxShape3D_kvppq")
+
+[node name="LeftSide" parent="DoorSkeleton/Skeleton3D" index="1"]
+transform = Transform3D(2.09538, 0, 0, 0, 2.09538, 0, 0, 7.45058e-09, 2.09538, -9.31323e-10, 0.862806, 0.538316)
+
+[node name="StaticBody3D" type="StaticBody3D" parent="DoorSkeleton/Skeleton3D/LeftSide/LeftSide" index="0"]
+collision_layer = 12
+collision_mask = 9
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DoorSkeleton/Skeleton3D/LeftSide/LeftSide/StaticBody3D" index="0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.05, 0.2)
+shape = SubResource("BoxShape3D_wsr4k")
+
+[node name="Top_2" parent="DoorSkeleton/Skeleton3D" index="2"]
+transform = Transform3D(2.09538, -3.01981e-14, -1.13687e-13, 3.01981e-14, 2.09538, 0, 0, 0, 2.09538, -3.41949e-14, 0.862807, 0.538317)
+
+[node name="StaticBody3D" type="StaticBody3D" parent="DoorSkeleton/Skeleton3D/Top_2/Top_2" index="0"]
+collision_layer = 12
+collision_mask = 9
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="DoorSkeleton/Skeleton3D/Top_2/Top_2/StaticBody3D" index="0"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.7, 0)
+shape = SubResource("BoxShape3D_85gag")
+
+[node name="AnimationPlayer" parent="." index="1"]
+speed_scale = 1.3
+
+[node name="AnimationTree" type="AnimationTree" parent="." index="2"]
+tree_root = SubResource("AnimationNodeStateMachine_ful1q")
+anim_player = NodePath("../AnimationPlayer")
+
+[node name="Button" type="StaticBody3D" parent="." index="3"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.742208, 0.243433, 0.859724)
+collision_layer = 10
+collision_mask = 0
+script = ExtResource("3_0i76c")
+prompt_message = "Push"
+prompt_input = "interact_primary"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="Button" index="0"]
+shape = SubResource("BoxShape3D_peowp")
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="Button" index="1"]
+mesh = SubResource("BoxMesh_luo53")
+
+[connection signal="interacted" from="Button" to="." method="toggle"]

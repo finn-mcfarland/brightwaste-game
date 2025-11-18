@@ -1,0 +1,189 @@
+[gd_scene load_steps=14 format=3 uid="uid://dkvrivnqxbvvu"]
+
+[ext_resource type="PackedScene" uid="uid://ccdh3wy21fgkp" path="res://Prefabs/player.tscn" id="2_bo1nx"]
+[ext_resource type="PackedScene" uid="uid://cgx5xq6e0orec" path="res://Prefabs/console.tscn" id="3_8gbba"]
+[ext_resource type="PackedScene" uid="uid://cio2n0f7v1e5j" path="res://Prefabs/collectible.tscn" id="4_6bp64"]
+[ext_resource type="PackedScene" uid="uid://df2twgr1xbl8g" path="res://Workshop/Imports/drone.tscn" id="4_jjvhh"]
+[ext_resource type="PackedScene" uid="uid://clb5y1ajyid73" path="res://Prefabs/engine.tscn" id="5_344ge"]
+[ext_resource type="Script" uid="uid://dsyb0jwoho7ni" path="res://Scripts/ship_generator_and_controller.gd" id="5_kry3j"]
+[ext_resource type="PackedScene" uid="uid://dsldx6k8bndqr" path="res://Prefabs/PauseMenu.tscn" id="6_21xkr"]
+[ext_resource type="PackedScene" uid="uid://d2mkpvcj3gfec" path="res://Prefabs/door.tscn" id="6_ynf5e"]
+[ext_resource type="MeshLibrary" uid="uid://0l6m73f5n147" path="res://Workshop/Libraries/Corridors.tres" id="7_ynf5e"]
+
+[sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_kry3j"]
+
+[sub_resource type="Sky" id="Sky_8gbba"]
+sky_material = SubResource("ProceduralSkyMaterial_kry3j")
+
+[sub_resource type="Environment" id="Environment_jjvhh"]
+background_mode = 2
+sky = SubResource("Sky_8gbba")
+tonemap_mode = 2
+glow_enabled = true
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kry3j"]
+albedo_color = Color(0.2484, 0.2484, 0.2484, 1)
+
+[node name="Root" type="Node3D"]
+
+[node name="env" type="Node3D" parent="."]
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="env"]
+environment = SubResource("Environment_jjvhh")
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="env"]
+transform = Transform3D(-0.866025, -0.433013, 0.25, 0, 0.5, 0.866025, -0.5, 0.75, -0.433013, 0, 0, 0)
+shadow_enabled = true
+
+[node name="stage" type="Node3D" parent="."]
+
+[node name="CSGBox3D" type="CSGBox3D" parent="stage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, -0.5, 0)
+use_collision = true
+collision_layer = 13
+collision_mask = 0
+size = Vector3(22, 1, 20)
+material = SubResource("StandardMaterial3D_kry3j")
+
+[node name="CSGBox3D3" type="CSGBox3D" parent="stage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 9, -0.5, 30.6182)
+use_collision = true
+collision_layer = 13
+collision_mask = 0
+size = Vector3(2, 1, 41.2363)
+material = SubResource("StandardMaterial3D_kry3j")
+
+[node name="CSGBox3D2" type="CSGBox3D" parent="stage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1.8, -8.5)
+use_collision = true
+collision_layer = 13
+collision_mask = 0
+size = Vector3(10, 1, 3)
+material = SubResource("StandardMaterial3D_kry3j")
+
+[node name="bridge1" type="CSGBox3D" parent="stage"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -9, -0.5, 12.5)
+use_collision = true
+collision_layer = 4
+collision_mask = 0
+size = Vector3(2, 1, 5)
+
+[node name="bridge2" type="CSGBox3D" parent="stage"]
+transform = Transform3D(1, 0, 0, 0, 0.989359, 0.145496, 0, -0.145496, 0.989359, 7, 2.10563, 29.0413)
+use_collision = true
+collision_layer = 4
+collision_mask = 0
+size = Vector3(2, 1, 39)
+
+[node name="bridge3" type="CSGBox3D" parent="stage"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 10.5, -0.5, -5.5)
+use_collision = true
+collision_layer = 4
+collision_mask = 0
+size = Vector3(2, 1, 1)
+
+[node name="bridge4" type="CSGBox3D" parent="stage"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 11.5, 0.5, -5.5)
+use_collision = true
+collision_layer = 4
+collision_mask = 0
+size = Vector3(2, 1, 1)
+
+[node name="bridge5" type="CSGBox3D" parent="stage"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 12.5, 1.5, -5.5)
+use_collision = true
+collision_layer = 4
+collision_mask = 0
+size = Vector3(2, 1, 1)
+
+[node name="bridge6" type="CSGBox3D" parent="stage"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 13.5, 2.5, -5.5)
+use_collision = true
+collision_layer = 4
+collision_mask = 0
+size = Vector3(2, 1, 1)
+
+[node name="bridge7" type="CSGBox3D" parent="stage"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 14.5, 3.5, -5.5)
+use_collision = true
+collision_layer = 4
+collision_mask = 0
+size = Vector3(2, 1, 1)
+
+[node name="bridge8" type="CSGBox3D" parent="stage"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 15.5, 4.5, -5.5)
+use_collision = true
+collision_layer = 4
+collision_mask = 0
+size = Vector3(2, 1, 1)
+
+[node name="bridge9" type="CSGBox3D" parent="stage"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 16.5, 5.5, -5.5)
+use_collision = true
+collision_layer = 4
+collision_mask = 0
+size = Vector3(2, 1, 1)
+
+[node name="bridge10" type="CSGBox3D" parent="stage"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 17.5, 6.5, -5.5)
+use_collision = true
+collision_layer = 4
+collision_mask = 0
+size = Vector3(2, 1, 1)
+
+[node name="bridge11" type="CSGBox3D" parent="stage"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 18.5, 7.5, -5.5)
+use_collision = true
+collision_layer = 4
+collision_mask = 0
+size = Vector3(2, 1, 1)
+
+[node name="bridge12" type="CSGBox3D" parent="stage"]
+transform = Transform3D(-4.37114e-08, 0, -1, 0, 1, 0, 1, 0, -4.37114e-08, 19.5, 8.5, -5.5)
+use_collision = true
+collision_layer = 4
+collision_mask = 0
+size = Vector3(2, 1, 1)
+
+[node name="Player" parent="." instance=ExtResource("2_bo1nx")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.6279, 7.23432)
+collision_mask = 85
+
+[node name="Console" parent="." instance=ExtResource("3_8gbba")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -5, 0.75, 4)
+collision_layer = 6
+path_to_drone_root = "../Drone"
+prompt_message = "Use"
+prompt_input = "interact_primary"
+
+[node name="Drone" parent="." instance=ExtResource("4_jjvhh")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -3, 1, 11)
+
+[node name="Fuel Cell" parent="." instance=ExtResource("4_6bp64")]
+transform = Transform3D(0.338015, 0.941141, 0, -0.941141, 0.338015, 0, 0, 0, 1, 4.55132, 1.36954, 3.04785)
+
+[node name="Fuel Cell3" parent="." instance=ExtResource("4_6bp64")]
+transform = Transform3D(0.338015, 0.941141, 0, -0.941141, 0.338015, 0, 0, 0, 1, 4.55132, 1.36954, 3.04785)
+
+[node name="Engine" parent="." instance=ExtResource("5_344ge")]
+transform = Transform3D(-4.37114e-08, 1, 0, -1, -4.37114e-08, 0, 0, 0, 1, 4.36105, 0.5, 4.74015)
+
+[node name="Door2" parent="." instance=ExtResource("6_ynf5e")]
+transform = Transform3D(-1, 0, -8.74228e-08, 0, 1, 0, 8.74228e-08, 0, -1, 10, 0.5, 10.5)
+
+[node name="ShipBase" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 10, 0, 10)
+script = ExtResource("5_kry3j")
+
+[node name="PlayerBox" type="Node3D" parent="ShipBase"]
+
+[node name="RoomBox" type="Node3D" parent="ShipBase"]
+
+[node name="Corridor" type="GridMap" parent="ShipBase"]
+mesh_library = ExtResource("7_ynf5e")
+cell_size = Vector3(1, 1.5, 1)
+cell_center_y = false
+
+[node name="Marker3D" type="Marker3D" parent="ShipBase"]
+
+[node name="Control" parent="." instance=ExtResource("6_21xkr")]

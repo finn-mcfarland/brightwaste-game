@@ -1,0 +1,29 @@
+[gd_scene load_steps=5 format=3 uid="uid://cio2n0f7v1e5j"]
+
+[ext_resource type="Script" uid="uid://ciw7clauanofv" path="res://Scripts/collectible.gd" id="1_3opl6"]
+
+[sub_resource type="SphereShape3D" id="SphereShape3D_e8f0j"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_kbr6a"]
+emission_enabled = true
+emission = Color(0.215639, 0.578301, 0, 1)
+emission_energy_multiplier = 3.0
+
+[sub_resource type="BoxMesh" id="BoxMesh_lwrff"]
+material = SubResource("StandardMaterial3D_kbr6a")
+
+[node name="Collectible" type="RigidBody3D"]
+collision_layer = 10
+collision_mask = 12
+continuous_cd = true
+script = ExtResource("1_3opl6")
+prompt_message = "Pick up"
+prompt_input = "interact_primary"
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+transform = Transform3D(0.5, 0, 0, 0, 0.5, 0, 0, 0, 0.5, 0, 0, 0)
+shape = SubResource("SphereShape3D_e8f0j")
+
+[node name="Collectible2" type="MeshInstance3D" parent="."]
+mesh = SubResource("BoxMesh_lwrff")
+skeleton = NodePath("")

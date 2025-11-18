@@ -1,0 +1,174 @@
+[gd_scene load_steps=7 format=3 uid="uid://dsldx6k8bndqr"]
+
+[ext_resource type="Shader" uid="uid://bpl6a5ablhmhb" path="res://Workshop/Shaders/PauseMenu.gdshader" id="1_ejcko"]
+[ext_resource type="Script" uid="uid://cxay1rpgs8bt1" path="res://Scripts/pause_menu.gd" id="1_o3hd0"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_o3hd0"]
+shader = ExtResource("1_ejcko")
+shader_parameter/blur_amount = 0.0
+shader_parameter/mix_amount = 0.0
+shader_parameter/color_over = Color(0, 0, 0, 1)
+
+[sub_resource type="Animation" id="Animation_bech0"]
+length = 0.3
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("PanelContainer:offset_right")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(-339, -0.15, 0, 0.15, 0),
+"times": PackedFloat32Array(0)
+}
+tracks/1/type = "bezier"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("PanelContainer:offset_left")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(-410, -0.15, 0, 0.15, 0),
+"times": PackedFloat32Array(0)
+}
+tracks/2/type = "bezier"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("ColorRect:material:shader_parameter/mix_amount")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(0, -0.15, 0, 0.15, 0),
+"times": PackedFloat32Array(0)
+}
+tracks/3/type = "bezier"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("ColorRect:material:shader_parameter/blur_amount")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"handle_modes": PackedInt32Array(0),
+"points": PackedFloat32Array(0, -0.15, 0, 0.15, 0),
+"times": PackedFloat32Array(0)
+}
+
+[sub_resource type="Animation" id="Animation_xu32l"]
+resource_name = "blurAndPull"
+length = 0.3
+tracks/0/type = "bezier"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("PanelContainer:offset_right")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"handle_modes": PackedInt32Array(0, 0),
+"points": PackedFloat32Array(-339, -0.25, 0, 0.25, 0, 70, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0, 0.3)
+}
+tracks/1/type = "bezier"
+tracks/1/imported = false
+tracks/1/enabled = true
+tracks/1/path = NodePath("PanelContainer:offset_left")
+tracks/1/interp = 1
+tracks/1/loop_wrap = true
+tracks/1/keys = {
+"handle_modes": PackedInt32Array(0, 0),
+"points": PackedFloat32Array(-410, -0.25, 0, 0.25, 0, 0, -0.25, 0, 0.25, 0),
+"times": PackedFloat32Array(0, 0.3)
+}
+tracks/2/type = "bezier"
+tracks/2/imported = false
+tracks/2/enabled = true
+tracks/2/path = NodePath("ColorRect:material:shader_parameter/mix_amount")
+tracks/2/interp = 1
+tracks/2/loop_wrap = true
+tracks/2/keys = {
+"handle_modes": PackedInt32Array(0, 0),
+"points": PackedFloat32Array(0, -0.15, 0, 0.15, 0, 0.4, -0.15, 0, 0.15, 0),
+"times": PackedFloat32Array(0, 0.3)
+}
+tracks/3/type = "bezier"
+tracks/3/imported = false
+tracks/3/enabled = true
+tracks/3/path = NodePath("ColorRect:material:shader_parameter/blur_amount")
+tracks/3/interp = 1
+tracks/3/loop_wrap = true
+tracks/3/keys = {
+"handle_modes": PackedInt32Array(0, 0),
+"points": PackedFloat32Array(0, -0.15, 0, 0.15, 0, 2.2, -0.15, 0, 0.15, 0),
+"times": PackedFloat32Array(0, 0.3)
+}
+
+[sub_resource type="AnimationLibrary" id="AnimationLibrary_s3wmd"]
+_data = {
+&"RESET": SubResource("Animation_bech0"),
+&"blurAndPull": SubResource("Animation_xu32l")
+}
+
+[node name="Control" type="Control"]
+process_mode = 3
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+script = ExtResource("1_o3hd0")
+
+[node name="ColorRect" type="ColorRect" parent="."]
+material = SubResource("ShaderMaterial_o3hd0")
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="PanelContainer" type="PanelContainer" parent="."]
+self_modulate = Color(1, 1, 1, 0.529412)
+layout_mode = 1
+anchors_preset = -1
+anchor_right = 0.2
+anchor_bottom = 1.0
+offset_left = -410.0
+offset_right = -339.0
+grow_vertical = 2
+
+[node name="MarginContainer" type="MarginContainer" parent="PanelContainer"]
+layout_mode = 2
+theme_override_constants/margin_left = 40
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 40
+
+[node name="VBoxContainer" type="VBoxContainer" parent="PanelContainer/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 30
+alignment = 1
+
+[node name="Resume" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Resume"
+
+[node name="Options" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Options"
+
+[node name="Menu" type="Button" parent="PanelContainer/MarginContainer/VBoxContainer"]
+layout_mode = 2
+text = "Menu"
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+&"": SubResource("AnimationLibrary_s3wmd")
+}
+
+[connection signal="pressed" from="PanelContainer/MarginContainer/VBoxContainer/Resume" to="." method="_on_resume_pressed"]
+[connection signal="pressed" from="PanelContainer/MarginContainer/VBoxContainer/Options" to="." method="_on_options_pressed"]
+[connection signal="pressed" from="PanelContainer/MarginContainer/VBoxContainer/Menu" to="." method="_on_menu_pressed"]

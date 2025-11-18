@@ -1,0 +1,57 @@
+[gd_scene load_steps=6 format=3 uid="uid://ccdh3wy21fgkp"]
+
+[ext_resource type="Script" uid="uid://cis0wpggi4od" path="res://Scripts/player.gd" id="1_5wxv7"]
+[ext_resource type="PackedScene" uid="uid://b6gr4buj4idn" path="res://Prefabs/CompletedFeatures/Interaction/interaction_ray.tscn" id="2_5wxv7"]
+[ext_resource type="Texture2D" uid="uid://6dba7hioghir" path="res://Workshop/Textures/Crosshair.png" id="3_y5hcb"]
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_jjgbg"]
+radius = 0.15
+height = 0.75
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_5wxv7"]
+radius = 0.2
+height = 0.4
+
+[node name="Player" type="CharacterBody3D"]
+collision_layer = 129
+collision_mask = 28
+script = ExtResource("1_5wxv7")
+
+[node name="StandingCol" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.375, 0)
+shape = SubResource("CapsuleShape3D_jjgbg")
+debug_color = Color(0, 0.6, 0.7, 0.42)
+
+[node name="CrouchingCol" type="CollisionShape3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.2, 0)
+shape = SubResource("CapsuleShape3D_5wxv7")
+disabled = true
+debug_color = Color(0, 0.6, 0.7, 0.42)
+
+[node name="Neck" type="Node3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.75, 0)
+
+[node name="Camera3D" type="Camera3D" parent="Neck"]
+fov = 80.0
+
+[node name="InteractionRay" parent="Neck/Camera3D" instance=ExtResource("2_5wxv7")]
+collision_mask = 14
+
+[node name="RayCast3D" type="RayCast3D" parent="."]
+target_position = Vector3(0, 1.2, 0)
+collision_mask = 76
+
+[node name="TextureRect" type="TextureRect" parent="."]
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -20.0
+offset_top = -20.0
+offset_right = 20.0
+offset_bottom = 20.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("3_y5hcb")
+stretch_mode = 3
