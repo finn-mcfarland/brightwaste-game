@@ -102,7 +102,7 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 		# Corridor stays unchanged
 		draw_line(total_width, Vector3.RIGHT, sliding_origin)
 	 
-		var is_symmetrical = randf() > 0.6 and total_width >= 8
+		var is_symmetrical = randf() > 1.0 and total_width >= 8
 	 
 		if is_symmetrical:
 			# Symmetrical split
@@ -110,7 +110,7 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 			var right_width = left_width
 			var center_width = total_width - left_width - right_width - 2 # exclude corridor
 	 
-			if center_width <= 1:
+			if center_width == 1:
 				center_width = 2
 				left_width = max(2, left_width - 1)
 				right_width = max(2, right_width - 1)
@@ -127,7 +127,7 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 			var left_width = randi_range(2, int(total_width / 2) - 1)
 			var right_width = total_width - left_width - 1 # exclude corridor
 	 
-			if right_width <= 1:
+			if right_width == 1:
 				right_width = 2
 				left_width = max(2, left_width - 1)
 	 
@@ -277,9 +277,6 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 	ordered_groups.append_array(external)
 	ordered_groups.append_array(theRest)
 
-	print("---- Pre-organized groups ----")
-	print(ordered_groups)
-	print("------------------------------")
 
 	# --- placement loop ---
 	for group in ordered_groups:
@@ -299,11 +296,14 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 				any_secure = true
 
 		var estimated_use = clamp((sum_min *1.2 ) + 2, sum_min, sum_max)
+		
 		var best_index = -1
 		var best_score = 1e9
 
 		for i in range(available_space_rooms.size()):
 			var area = space_left[i]
+			if area < 8:
+				estimated_use = sum_min
 			var is_empty_space = rooms_assigned_to_spaces[i].is_empty()
 
 			# --- Hard feasibility checks ---
@@ -371,6 +371,8 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 	print("Rooms assigned to spaces: ", rooms_assigned_to_spaces)
 	print("Remaining space: ", space_left)
 	print("--------------spaces for floor complete--------------")
+	print("\n")
+	print("--------------next floor--------------")
 
 	#endregion
 
@@ -385,293 +387,241 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 			print("empty space - removed from division, as recursive room dividing algorithm assumes contents")
 			continue
 		divide_space(available_space_rooms[i], rooms_assigned_to_spaces[i], origin.y)
-
 func divide_space(space: Array, rooms: Array, floor_number: int) -> void:
-	# --- Early exits (kept minimal) a---
+	# --- Early exits ---
 	if rooms.is_empty():
 		return
+	
+	# If we are down to 1 room, build it.
 	if rooms.size() == 1:
 		var room = rooms[0]
-		var room_size = Vector3(space[2], room_height, space[3])
+		# Ensure dimensions are at least 1 to prevent physics errors
+		var s_width = max(1, space[2])
+		var s_depth = max(1, space[3])
+		
+		var room_size = Vector3(s_width, room_height, s_depth)
 		var room_position = Vector3(space[0], floor_number * room_height, space[1])
 		room.populate_room(room_size, room_position)
 		return
 
 	# --- Categorize rooms ---
 	var externals: Array = []
-	var free_rooms: Array = []
+	var unassigned: Array = []
 	var pairs: Array = []
 
 	for r in rooms:
 		if r.info.needs_external_access:
 			externals.append(r)
-		elif not r.info.adjacent_room_requirements.is_empty():
-			# keep potential pair candidates in free_rooms (we'll pair later)
-			free_rooms.append(r)
 		else:
-			free_rooms.append(r)
+			# FIX 1: Put ALL internal rooms (even "free" ones) here.
+			# This ensures adjacency checks can find them.
+			unassigned.append(r)
 
-	# Build adjacency pairs (produce a list of pair-arrays)
-	var free_copy = free_rooms.duplicate()
-	while free_copy.size() > 0:
-		var r = free_copy.pop_front()
-		var matched = false
-		for other in free_copy:
-			if r.info.adjacent_room_requirements.has(other.name):
-				pairs.append([r, other])
-				free_copy.erase(other)
-				matched = true
-				break
-		if not matched:
-			pairs.append([r]) # unpaired but kept as single-element array
+	# --- Adjacency Processing (Grouping Connected Components) ---
+	# We process 'unassigned' until empty. Isolated rooms become pairs of size 1.
+	while unassigned.size() > 0:
+		var root = unassigned.pop_back()
+		var cluster = [root]
+		var stack = [root]
 
-	# --- External-only shortcut (prevents infinite recursion) ---
+		while stack.size() > 0:
+			var cur = stack.pop_back()
+			# Iterate backwards to allow safe removal
+			for j in range(unassigned.size() - 1, -1, -1):
+				var cand = unassigned[j]
+				# Check both directions: Does Cur want Cand? OR Does Cand want Cur?
+				var cur_wants = cur.info.adjacent_room_requirements.has(cand.info.room_name)
+				var cand_wants = cand.info.adjacent_room_requirements.has(cur.info.room_name)
+				
+				if cur_wants or cand_wants:
+					cluster.append(cand)
+					stack.append(cand)
+					unassigned.remove_at(j) # Use remove_at for clarity
+
+		pairs.append(cluster)
+
+	# --- External-only shortcut ---
+	# (Prevents infinite recursion if only external rooms exist)
 	if externals.size() == rooms.size():
-		var along_axis = 0 if space[2] >= space[3] else 1  # lay them along longest wall
+		var along_axis = 0 if space[2] >= space[3] else 1 
 		var available = space[2] if along_axis == 0 else space[3]
-
-		# distribute proportionally by min_size (defensive)
-		var total_min = 0
-		for r in externals:
-			total_min += r.info.min_size
+		var cur_pos = space[along_axis]
+		
+		var total_min = 0.0
+		for r in externals: total_min += r.info.min_size
+		
 		var scale = 1.0
 		if total_min > available and total_min > 0:
 			scale = float(available) / float(total_min)
-
-		var cur = space[along_axis]
+		
 		for i in range(externals.size()):
 			var r = externals[i]
-			var seg_size = int(clamp(r.info.min_size * scale, 1, r.info.max_size))
-
-			# last absorbs leftover
+			# Calculate segment size
+			var seg_size = int(max(1, r.info.min_size * scale))
+			
+			# Give all remaining space to the last room to avoid gaps/rounding errors
 			if i == externals.size() - 1:
-				seg_size = available - (cur - space[along_axis])
-
+				seg_size = available - (cur_pos - space[along_axis])
+			
+			if seg_size <= 0: seg_size = 1 # Safety clamp
+			
 			var s = space.duplicate()
-			s[along_axis] = cur
+			s[along_axis] = cur_pos
 			s[2 + along_axis] = seg_size
-			var room_size = Vector3(s[2], room_height, s[3])
-			var room_pos = Vector3(s[0], floor_number * room_height, s[1])
-			r.populate_room(room_size, room_pos)
-			cur += seg_size
+			
+			var r_size = Vector3(s[2], room_height, s[3])
+			var r_pos = Vector3(s[0], floor_number * room_height, s[1])
+			r.populate_room(r_size, r_pos)
+			cur_pos += seg_size
 		return
 
-	# --- Init groups (ensure groups are arrays of room objects, not nested arrays) ---
-	var groups = [[], []] # groups[0] and groups[1] will be flat arrays of Room objects
+	# --- Init Groups ---
+	# groups[0] = Top/Left, groups[1] = Bottom/Right
+	var groups = [[], []] 
+	
+	# Pre-assign externals based on heuristic (e.g. side of building)
 	if externals.size() > 0:
-		# choose side heuristics as your original: using space[0]==0 as sentinel
-		if space[0] == 0:
-			groups[0] = externals.duplicate()
-		else:
-			groups[1] = externals.duplicate()
+		if space[0] == 0: groups[0] = externals.duplicate()
+		else:             groups[1] = externals.duplicate()
 
-	# --- Assign pairs & free rooms into groups (flatten pairs into groups) ---
+	# --- Distribute Adjacency Clusters (Pairs) ---
+	# pool contains clusters (arrays of rooms) that need to stay together
 	var pool: Array = []
+	
 	for p in pairs:
-		# p is an Array containing 1 or more Room objects
-		var needs_external = false
+		var placed = false
+		# If any room in the cluster needs external access, the whole cluster follows
+		# (Though logic above stripped externals, complex reqs might trigger this)
 		for item in p:
 			if item.info.needs_external_access:
-				needs_external = true
+				if space[0] == 0: 
+					for it in p: groups[0].append(it)
+				else:             
+					for it in p: groups[1].append(it)
+				placed = true
 				break
-		if needs_external:
-			if space[0] == 0:
-				for item in p: groups[0].append(item)
-			else:
-				for item in p: groups[1].append(item)
-		else:
-			# add to pool as flattened array for later balancing
-			pool.append(p.duplicate())
+		if not placed:
+			pool.append(p) # Keep structure: Array of Arrays
 
-	# Also add any leftover unpaired free rooms that weren't in `pairs` (defensive)
-	# (In this implementation `pairs` already contains them, so this is extra-safety.)
-
-	# --- Ratio balancing: distribute pool into groups (flattening pairs) ---
+	# --- Ratio Balancing ---
+	# We want to split the area roughly based on how many rooms are in each group
 	var ratio_goal = [1, 1]
-	if (space[3] / max(1, rooms.size())) * 3 > space[2]:
+	# Simple aspect ratio heuristic: if tall, maybe split differently
+	if (space[3] / max(1.0, float(rooms.size()))) * 3.0 > space[2]:
 		ratio_goal = [1, 2]
-		if space[0] == 0:
-			ratio_goal = [2, 1]
+		if space[0] == 0: ratio_goal = [2, 1]
 
-	var current_ratio = [groups[0].size(), groups[1].size()]
-	for item in pool:
-		var size = 0
-		if item is Array:
-			size = item.size()
-		else:
-			size = 1
-		var r0 = float(current_ratio[0]) / float(ratio_goal[0])
-		var r1 = float(current_ratio[1]) / float(ratio_goal[1])
-		var g = 0 if (r0 < r1) else 1
-		# append flattened
-		if item is Array:
-			for it in item:
-				groups[g].append(it)
-		else:
-			groups[g].append(item)
-		current_ratio[g] += size
+	var current_counts = [groups[0].size(), groups[1].size()]
+	
+	# Sort pool by cluster size (largest first) to pack them better? Optional.
+	# pool.sort_custom(func(a, b): return a.size() > b.size())
 
-	# --- Compute group "weights" (group_areas) safely ---
-	var group_areas = []
-	for g in groups:
-		var total = 0.0
-		for r in g:
-			# defensive: ensure r is object with info
-			if typeof(r) != TYPE_OBJECT:
-				push_error("divide_space: non-object room in group: %s" % str(r))
-				continue
-			# use average size as weight to avoid zero weights
-			var min_s = int(r.info.min_size)
-			var max_s = int(r.info.max_size)
-			var weight = float(min_s + max_s) / 2.0
-			# ensure positive
-			weight = max(0.001, weight)
-			total += weight
-		group_areas.append(total)
+	for cluster in pool:
+		var size = cluster.size()
+		# Determine which side is more "starved" based on ratio
+		var r0 = float(current_counts[0]) / float(max(1, ratio_goal[0]))
+		var r1 = float(current_counts[1]) / float(max(1, ratio_goal[1]))
+		
+		var g_idx = 0 if (r0 < r1) else 1
+		
+		# Flatten the cluster into the chosen group so they stay physically together
+		for r in cluster:
+			groups[g_idx].append(r)
+		current_counts[g_idx] += size
+		
+	# --- CIRCUIT BREAKER: Prevent Infinite Recursion ---
+	# If adjacency constraints forced EVERYONE into one group, we haven't divided the problem.
+	# We must force a split, essentially "snapping" the adjacency chain at the midpoint.
+	if rooms.size() > 1:
+		if groups[0].is_empty() and groups[1].size() > 0:
+			var half = groups[1].size() / 2
+			# Move first half to group 0
+			groups[0] = groups[1].slice(0, half)
+			# Keep second half in group 1
+			groups[1] = groups[1].slice(half)
+			
+		elif groups[1].is_empty() and groups[0].size() > 0:
+			var half = groups[0].size() / 2
+			# Move first half to group 1
+			groups[1] = groups[0].slice(0, half)
+			# Keep second half in group 0
+			groups[0] = groups[0].slice(half)
+			
+	# --- Calculate Weights (Area Requirements) ---
+	var group_weights = [0.0, 0.0]
+	for i in range(2):
+		for r in groups[i]:
+			var w = (r.info.min_size + r.info.max_size) / 2.0
+			group_weights[i] += max(1.0, w)
 
-	# --- Decide axis and dist consistently ---
-	var axis = 0 if (space[2] > space[3]) else 1
-	var dist = space[2] if axis == 0 else space[3]
-	dist = int(max(1, dist))
-	# --- Robust proportional split: compute float shares, floor them, distribute remainder by largest remainders ---
-	var total_area = 0.0
-	for a in group_areas:
-		total_area += a
+	# --- Determine Split Axis & Distance ---
+	var axis = 0 if (space[2] > space[3]) else 1 # 0=X (Width), 1=Z (Depth)
+	var available_dist = space[2] if axis == 0 else space[3]
+	available_dist = int(max(1, available_dist))
 
-	var counts = []
-	for i in range(group_areas.size()):
-		counts.append(0)
+	# --- Calculate Split Sizes (Integer Partitioning) ---
+	var split_counts = [0, 0]
+	var total_weight = group_weights[0] + group_weights[1]
 
-	if total_area <= 0.0:
-		# fallback: even split
-		for i in range(counts.size()):
-			counts[i] = int(floor(dist / counts.size()))
-		var leftover = dist - Global.sum(counts)
-		var idx = 0
-		while leftover > 0:
-			counts[idx] += 1
-			leftover -= 1
-			idx = (idx + 1) % counts.size()
+	if total_weight <= 0:
+		# Fallback: Equal split
+		split_counts[0] = int(available_dist / 2)
+		split_counts[1] = available_dist - split_counts[0]
 	else:
-		# compute float shares
-		var float_shares = []
-		for a in group_areas:
-			float_shares.append((a / total_area) * float(dist))
-		# floor
-		var floored = []
-		for f in float_shares:
-			floored.append(int(floor(f)))
-		var floored_sum = Global.sum(floored)
-		var remainder = dist - floored_sum
+		# Proportional split
+		var share_0 = (group_weights[0] / total_weight) * float(available_dist)
+		split_counts[0] = int(round(share_0))
+		split_counts[1] = available_dist - split_counts[0]
 
-		# compute fractional remainders and sort indices by largest fractional part
-		var fracs = []
-		for i in range(float_shares.size()):
-			fracs.append({ "idx": i, "frac": float_shares[i] - floored[i] })
-		fracs.sort_custom(func(a,b):
-			if a["frac"] > b["frac"]: return -1
-			if a["frac"] < b["frac"]: return 1
-			return 0
-		)
+	# --- Enforce Minimum Segment Size ---
+	var MIN_SEGMENT = 2 # minimum units for a valid room/hallway
+	
+	# Only enforce if we have enough space for 2 segments
+	if available_dist >= MIN_SEGMENT * 2:
+		# If Group 0 is not empty but segment is too small, steal from Group 1
+		if groups[0].size() > 0 and split_counts[0] < MIN_SEGMENT:
+			var diff = MIN_SEGMENT - split_counts[0]
+			split_counts[0] += diff
+			split_counts[1] -= diff
+		
+		# If Group 1 is not empty but segment is too small, steal back from Group 0
+		if groups[1].size() > 0 and split_counts[1] < MIN_SEGMENT:
+			var diff = MIN_SEGMENT - split_counts[1]
+			split_counts[1] += diff
+			split_counts[0] -= diff
 
-		# distribute remainder
-		for i in range(floored.size()):
-			counts[i] = floored[i]
-		var j = 0
-		while remainder > 0 and j < fracs.size():
-			counts[fracs[j]["idx"]] += 1
-			remainder -= 1
-			j += 1
-		while remainder > 0:
-			counts[j % counts.size()] += 1
-			remainder -= 1
-			j += 1
+	# --- Sanity Check / Final Clamp ---
+	# Ensure we didn't go negative or exceed bounds due to stealing
+	split_counts[0] = clampi(split_counts[0], 0, available_dist)
+	split_counts[1] = available_dist - split_counts[0]
 
-	# --- Enforce minimum segment length ---
-	var MIN_SEGMENT = 2
-	MIN_SEGMENT = min(MIN_SEGMENT, dist)
-
-	# --- CRITICAL FIX: Pre-emptively shrink earlier segments so later ones can still reach MIN_SEGMENT ---
-	var running_total = 0
-	for i in range(counts.size()):
-		running_total += counts[i]
-		var remaining = counts.size() - (i + 1)
-		if remaining <= 0:
-			break
-
-		var remaining_space = dist - running_total
-		var min_needed = remaining * MIN_SEGMENT
-
-		# If remaining_space < min_needed, shrink this segment just enough
-		if remaining_space < min_needed:
-			var excess = min_needed - remaining_space
-			counts[i] = max(MIN_SEGMENT, counts[i] - excess)
-			running_total = Global.sum(counts.slice(0, i + 1))
-
-	# --- Pass 2: lift up any segment smaller than MIN_SEGMENT by borrowing from largest donors ---
-	var changed = true
-	var safety = 0
-	while changed and safety < 100:
-		changed = false
-		safety += 1
-		for i in range(counts.size()):
-			if counts[i] < MIN_SEGMENT:
-				var need = MIN_SEGMENT - counts[i]
-				var donor = -1
-				var donor_spare = 0
-				for j in range(counts.size()):
-					if j == i:
-						continue
-					var spare = counts[j] - MIN_SEGMENT
-					if spare > donor_spare:
-						donor_spare = spare
-						donor = j
-				if donor != -1 and donor_spare > 0:
-					var give = min(donor_spare, need)
-					counts[donor] -= give
-					counts[i] += give
-					changed = true
-
-	# --- Final normalization: make sure sum == dist ---
-	var sum_counts = Global.sum(counts)
-	if sum_counts != dist:
-		var adjust = dist - sum_counts
-		counts[counts.size() - 1] += adjust
-
-	# --- Validation and logging ---
-	for i in range(counts.size()):
-		if counts[i] < MIN_SEGMENT:
-			push_error("divide_space: could not enforce min segment for index %d (counts=%s dist=%d)" % [i, str(counts), dist])
-		if counts[i] <= 0:
-			push_error("divide_space: final counts[%d] <= 0 (value=%s)." % [i, str(counts[i])])
-		if counts[i] > dist:
-			push_error("divide_space: final counts[%d] > dist (value=%s)." % [i, str(counts[i])])
-
-	# --- Subdivide and recurse ---
-	var cur = space[axis]
-	var subspaces = []
-	for i in range(counts.size()):
-		var t = counts[i]
-		if t <= 0:
-			continue
-		var s = space.duplicate()
-		s[axis] = cur
-		s[2 + axis] = t
-		# defensive clamp: don't let subspace grow beyond original extents
-		if s[2 + axis] > (space[2] if axis == 0 else space[3]):
-			push_error("divide_space: clamping oversized subspace t=%d to max extents" % t)
-			s[2 + axis] = (space[2] if axis == 0 else space[3])
-		subspaces.append(s)
-		cur += t
-
-	# Recurse into valid subspaces only, matching group -> subspace count
-	for i in range(min(groups.size(), subspaces.size())):
-		if groups[i].size() > 0:
-			# skip degenerate subspaces
-			if subspaces[i][2] <= 1 or subspaces[i][3] <= 1:
-				push_error("divide_space: skipping degenerate subspace: %s" % str(subspaces[i]))
-				continue
-			divide_space(subspaces[i], groups[i], floor_number)
+	# --- Recurse ---
+	# FIX 2: Synchronized Iteration
+	# We iterate 0 and 1 explicitly to match groups[0] and groups[1] to their split sizes.
+	
+	var current_pos = space[axis]
+	
+	for i in range(2):
+		var size_alloc = split_counts[i]
+		var group_rooms = groups[i]
+		
+		# If the group has rooms, it MUST have space.
+		if group_rooms.size() > 0:
+			if size_alloc <= 0:
+				push_warning("divide_space: Group %d has %d rooms but 0 space allocated! forcing 1 unit." % [i, group_rooms.size()])
+				# Emergency recovery: overlaps slightly but prevents crash/disappearance
+				size_alloc = 1 
+			
+			var sub_space = space.duplicate()
+			sub_space[axis] = current_pos
+			sub_space[2 + axis] = size_alloc
+			
+			# Recursion
+			divide_space(sub_space, group_rooms, floor_number)
+			
+		# Advance position regardless of whether rooms existed, 
+		# so the math stays consistent for the next segment (if we had >2 splits)
+		current_pos += size_alloc
 
 
 func is_space_external(space) -> bool:
