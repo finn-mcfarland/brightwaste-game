@@ -23,7 +23,7 @@ func _ready():
 	var selected_ship = Global.ship_setups[randi_range(0, Global.ship_setups.size() - 1)]
 	var width_and_length = area_to_width_and_length(selected_ship.min_size, selected_ship.max_size, selected_ship.ratio_lims)
 	var ship_z_size = ceil(width_and_length[0])
-	var ship_x_size = ceil(width_and_length[1])
+	var ship_x_size = max(ceil(width_and_length[1]),3)
 	
 	#used for snapping eventually.
 	#var ship_levels = randi_range(1, 3)
@@ -373,7 +373,6 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 	print("--------------spaces for floor complete--------------")
 	print("\n")
 	print("--------------next floor--------------")
-
 	#endregion
 
 
@@ -387,230 +386,178 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 			print("empty space - removed from division, as recursive room dividing algorithm assumes contents")
 			continue
 		divide_space(available_space_rooms[i], rooms_assigned_to_spaces[i], origin.y)
+		
+
 func divide_space(space: Array, rooms: Array, floor_number: int) -> void:
-	# --- Early exits ---
-	if rooms.is_empty():
-		return
+	# --- 1. Base Cases ---
+	if rooms.is_empty(): return
 	
-	# If we are down to 1 room, build it.
+	var s_w = space[2] # Width (X)
+	var s_d = space[3] # Depth (Z)
+
+	# --- Base Case 1: Final Adjacency Guaranteed ---
+	# If we have 2 rooms, this must be the final placement for the adjacent pair.
+	if rooms.size() == 2:
+		var axis = 0 if s_w >= s_d else 1 # Split the longest side
+		var r1 = rooms[0]
+		var r2 = rooms[1]
+		
+		# Calculate split position based on min size (50/50 if not specified)
+		var min_size_total = float(r1.info.min_size + r2.info.min_size)
+		var split_pos = int(round(r1.info.min_size / max(1.0, min_size_total) * (s_w if axis == 0 else s_d)))
+		split_pos = clampi(split_pos, 2, (s_w if axis == 0 else s_d) - 2)
+		
+		# Place Room 1 (Subspace 0)
+		var s0 = space.duplicate()
+		s0[2+axis] = split_pos
+		r1.populate_room(Vector3(s0[2], room_height, s0[3]), Vector3(s0[0], floor_number * room_height, s0[1]))
+		
+		# Place Room 2 (Subspace 1)
+		var s1 = space.duplicate()
+		var rem_len = (s_w if axis == 0 else s_d) - split_pos
+		s1[axis] += split_pos
+		s1[2+axis] = rem_len
+		r2.populate_room(Vector3(s1[2], room_height, s1[3]), Vector3(s1[0], floor_number * room_height, s1[1]))
+		return
+
+	# --- Base Case 2: Single Room ---
 	if rooms.size() == 1:
-		var room = rooms[0]
-		# Ensure dimensions are at least 1 to prevent physics errors
-		var s_width = max(1, space[2])
-		var s_depth = max(1, space[3])
-		
-		var room_size = Vector3(s_width, room_height, s_depth)
-		var room_position = Vector3(space[0], floor_number * room_height, space[1])
-		room.populate_room(room_size, room_position)
+		var r = rooms[0]
+		r.populate_room(Vector3(max(1, s_w), room_height, max(1, s_d)), Vector3(space[0], floor_number * room_height, space[1]))
 		return
 
-	# --- Categorize rooms ---
-	var externals: Array = []
-	var unassigned: Array = []
-	var pairs: Array = []
+	# --- 3. Strict Pair & Single Separation ---
+	# We separate into size-2 pairs and rooms that failed to pair (singles).
+	var pairs: Array = [] # Stores arrays of size 2 (rigid units)
+	var singles: Array = [] # Stores size 1 (unassigned rooms)
+	var assigned_rooms: Array = []
 
-	for r in rooms:
-		if r.info.needs_external_access:
-			externals.append(r)
-		else:
-			# FIX 1: Put ALL internal rooms (even "free" ones) here.
-			# This ensures adjacency checks can find them.
-			unassigned.append(r)
-
-	# --- Adjacency Processing (Grouping Connected Components) ---
-	# We process 'unassigned' until empty. Isolated rooms become pairs of size 1.
-	while unassigned.size() > 0:
-		var root = unassigned.pop_back()
-		var cluster = [root]
-		var stack = [root]
-
-		while stack.size() > 0:
-			var cur = stack.pop_back()
-			# Iterate backwards to allow safe removal
-			for j in range(unassigned.size() - 1, -1, -1):
-				var cand = unassigned[j]
-				# Check both directions: Does Cur want Cand? OR Does Cand want Cur?
-				var cur_wants = cur.info.adjacent_room_requirements.has(cand.info.room_name)
-				var cand_wants = cand.info.adjacent_room_requirements.has(cur.info.room_name)
-				
-				if cur_wants or cand_wants:
-					cluster.append(cand)
-					stack.append(cand)
-					unassigned.remove_at(j) # Use remove_at for clarity
-
-		pairs.append(cluster)
-
-	# --- External-only shortcut ---
-	# (Prevents infinite recursion if only external rooms exist)
-	if externals.size() == rooms.size():
-		var along_axis = 0 if space[2] >= space[3] else 1 
-		var available = space[2] if along_axis == 0 else space[3]
-		var cur_pos = space[along_axis]
+	# We check ALL rooms against each other to find size-2 pairs
+	for i in range(rooms.size()):
+		var r1 = rooms[i]
+		if assigned_rooms.has(r1): continue
 		
-		var total_min = 0.0
-		for r in externals: total_min += r.info.min_size
-		
-		var scale = 1.0
-		if total_min > available and total_min > 0:
-			scale = float(available) / float(total_min)
-		
-		for i in range(externals.size()):
-			var r = externals[i]
-			# Calculate segment size
-			var seg_size = int(max(1, r.info.min_size * scale))
+		var found_pair = false
+		for j in range(i + 1, rooms.size()):
+			var r2 = rooms[j]
+			if assigned_rooms.has(r2): continue
 			
-			# Give all remaining space to the last room to avoid gaps/rounding errors
-			if i == externals.size() - 1:
-				seg_size = available - (cur_pos - space[along_axis])
+			# Check for mutual or one-way adjacency link (must exist for a pair)
+			var r1_wants_r2 = r1.info.adjacent_room_requirements.has(r2.info.room_name)
+			var r2_wants_r1 = r2.info.adjacent_room_requirements.has(r1.info.room_name)
 			
-			if seg_size <= 0: seg_size = 1 # Safety clamp
-			
-			var s = space.duplicate()
-			s[along_axis] = cur_pos
-			s[2 + along_axis] = seg_size
-			
-			var r_size = Vector3(s[2], room_height, s[3])
-			var r_pos = Vector3(s[0], floor_number * room_height, s[1])
-			r.populate_room(r_size, r_pos)
-			cur_pos += seg_size
-		return
-
-	# --- Init Groups ---
-	# groups[0] = Top/Left, groups[1] = Bottom/Right
-	var groups = [[], []] 
-	
-	# Pre-assign externals based on heuristic (e.g. side of building)
-	if externals.size() > 0:
-		if space[0] == 0: groups[0] = externals.duplicate()
-		else:             groups[1] = externals.duplicate()
-
-	# --- Distribute Adjacency Clusters (Pairs) ---
-	# pool contains clusters (arrays of rooms) that need to stay together
-	var pool: Array = []
-	
-	for p in pairs:
-		var placed = false
-		# If any room in the cluster needs external access, the whole cluster follows
-		# (Though logic above stripped externals, complex reqs might trigger this)
-		for item in p:
-			if item.info.needs_external_access:
-				if space[0] == 0: 
-					for it in p: groups[0].append(it)
-				else:             
-					for it in p: groups[1].append(it)
-				placed = true
+			if r1_wants_r2 or r2_wants_r1:
+				pairs.append([r1, r2])
+				assigned_rooms.append(r1)
+				assigned_rooms.append(r2)
+				found_pair = true
 				break
-		if not placed:
-			pool.append(p) # Keep structure: Array of Arrays
+		
+		if not found_pair:
+			singles.append(r1)
+			assigned_rooms.append(r1)
 
-	# --- Ratio Balancing ---
-	# We want to split the area roughly based on how many rooms are in each group
-	var ratio_goal = [1, 1]
-	# Simple aspect ratio heuristic: if tall, maybe split differently
-	if (space[3] / max(1.0, float(rooms.size()))) * 3.0 > space[2]:
-		ratio_goal = [1, 2]
-		if space[0] == 0: ratio_goal = [2, 1]
-
-	var current_counts = [groups[0].size(), groups[1].size()]
+	# --- 4. Group Assignment (A $\leftrightarrow$ B $\rightarrow$ Group 0/1) ---
+	var groups = [[], []] 
+	var external_side_idx = 0 if space[0] == 0 else 1
 	
-	# Sort pool by cluster size (largest first) to pack them better? Optional.
-	# pool.sort_custom(func(a, b): return a.size() > b.size())
+	# Place all pairs/singles into groups, honoring external access first
+	var pool = pairs.duplicate() # Pairs are atomic units
+	pool.append_array(singles)   # Singles are atomic units
 
-	for cluster in pool:
-		var size = cluster.size()
-		# Determine which side is more "starved" based on ratio
-		var r0 = float(current_counts[0]) / float(max(1, ratio_goal[0]))
-		var r1 = float(current_counts[1]) / float(max(1, ratio_goal[1]))
+	# Helper to calculate group sizes for ratio balancing
+	var current_counts = [0, 0]
+	
+	for item in pool:
+		var is_pair = item is Array
+		var size = item.size() if is_pair else 1
 		
-		var g_idx = 0 if (r0 < r1) else 1
+		# Determine if this item has an external requirement
+		var needs_external = false
+		if is_pair:
+			for r in item:
+				if r.info.needs_external_access: needs_external = true
+		elif item.info.needs_external_access:
+			needs_external = true
+
+		var g_idx = -1
+		if needs_external:
+			g_idx = external_side_idx
+		else:
+			# Ratio balancing for internal items
+			var r0 = float(current_counts[0]) / max(1.0, float(external_side_idx + 1)) # Simple target ratio
+			var r1 = float(current_counts[1]) / max(1.0, float(2 - external_side_idx))
+			g_idx = 0 if r0 < r1 else 1
 		
-		# Flatten the cluster into the chosen group so they stay physically together
-		for r in cluster:
-			groups[g_idx].append(r)
+		# FIX: The core of the user's request. Add the whole item to the group.
+		if is_pair:
+			groups[g_idx].append_array(item) # Add R1 and R2 to the group
+		else:
+			groups[g_idx].append(item)
 		current_counts[g_idx] += size
+
+	# --- 5. Circuit Breaker (Anti-Infinite Recursion) ---
+	# We must force a split if one group is empty, breaking a pair if necessary.
+	if groups[0].size() > 0 and groups[1].is_empty():
+		var full_group = groups[0]
+		var split_idx = full_group.size() / 2
+		groups[1] = full_group.slice(split_idx)
+		groups[0] = full_group.slice(0, split_idx)
 		
-	# --- CIRCUIT BREAKER: Prevent Infinite Recursion ---
-	# If adjacency constraints forced EVERYONE into one group, we haven't divided the problem.
-	# We must force a split, essentially "snapping" the adjacency chain at the midpoint.
-	if rooms.size() > 1:
-		if groups[0].is_empty() and groups[1].size() > 0:
-			var half = groups[1].size() / 2
-			# Move first half to group 0
-			groups[0] = groups[1].slice(0, half)
-			# Keep second half in group 1
-			groups[1] = groups[1].slice(half)
-			
-		elif groups[1].is_empty() and groups[0].size() > 0:
-			var half = groups[0].size() / 2
-			# Move first half to group 1
-			groups[1] = groups[0].slice(0, half)
-			# Keep second half in group 0
-			groups[0] = groups[0].slice(half)
-			
-	# --- Calculate Weights (Area Requirements) ---
-	var group_weights = [0.0, 0.0]
-	for i in range(2):
-		for r in groups[i]:
-			var w = (r.info.min_size + r.info.max_size) / 2.0
-			group_weights[i] += max(1.0, w)
+	elif groups[1].size() > 0 and groups[0].is_empty():
+		var full_group = groups[1]
+		var split_idx = full_group.size() / 2
+		groups[0] = full_group.slice(split_idx)
+		groups[1] = full_group.slice(0, split_idx)
 
-	# --- Determine Split Axis & Distance ---
-	var axis = 0 if (space[2] > space[3]) else 1 # 0=X (Width), 1=Z (Depth)
-	var available_dist = space[2] if axis == 0 else space[3]
-	available_dist = int(max(1, available_dist))
+	# --- 6. Split Axis Selection ---
+	var axis = 0 if s_w >= s_d else 1 # 0=X (Width), 1=Z (Depth)
+	var available_dist = s_w if axis == 0 else s_d
+	var cross_length = s_d if axis == 0 else s_w
+	
+	# --- 7. Hard Math Split (Area Requirement) ---
+	
+	# Using the helper function defined externally:
+	var min_len_0 = get_min_length_for_group(groups[0], cross_length)
+	var min_len_1 = get_min_length_for_group(groups[1], cross_length)
 
-	# --- Calculate Split Sizes (Integer Partitioning) ---
-	var split_counts = [0, 0]
-	var total_weight = group_weights[0] + group_weights[1]
+	var total_req = min_len_0 + min_len_1
+	var slack = available_dist - total_req
+	
+	var split_pos = 0
 
-	if total_weight <= 0:
-		# Fallback: Equal split
-		split_counts[0] = int(available_dist / 2)
-		split_counts[1] = available_dist - split_counts[0]
+	if slack < 0:
+		# OVERFLOW: Squeeze proportionally
+		var total_min_req = float(min_len_0 + min_len_1)
+		var ratio = min_len_0 / max(1.0, total_min_req)
+		split_pos = int(floor(available_dist * ratio))
+		push_warning("Map Overcrowded: Total required: %d, Available: %d" % [total_req, available_dist])
 	else:
-		# Proportional split
-		var share_0 = (group_weights[0] / total_weight) * float(available_dist)
-		split_counts[0] = int(round(share_0))
-		split_counts[1] = available_dist - split_counts[0]
-
-	# --- Enforce Minimum Segment Size ---
-	var MIN_SEGMENT = 2 # minimum units for a valid room/hallway
-	
-	# Only enforce if we have enough space for 2 segments
-	if available_dist >= MIN_SEGMENT * 2:
-		# If Group 0 is not empty but segment is too small, steal from Group 1
-		if groups[0].size() > 0 and split_counts[0] < MIN_SEGMENT:
-			var diff = MIN_SEGMENT - split_counts[0]
-			split_counts[0] += diff
-			split_counts[1] -= diff
+		# NORMAL: Distribute slack based on room count (simpler than area ratio)
+		var total_size = float(groups[0].size() + groups[1].size())
+		var count_ratio = float(groups[0].size()) / max(1.0, total_size)
+		split_pos = min_len_0 + int(round(slack * count_ratio))
 		
-		# If Group 1 is not empty but segment is too small, steal back from Group 0
-		if groups[1].size() > 0 and split_counts[1] < MIN_SEGMENT:
-			var diff = MIN_SEGMENT - split_counts[1]
-			split_counts[1] += diff
-			split_counts[0] -= diff
-
-	# --- Sanity Check / Final Clamp ---
-	# Ensure we didn't go negative or exceed bounds due to stealing
-	split_counts[0] = clampi(split_counts[0], 0, available_dist)
-	split_counts[1] = available_dist - split_counts[0]
-
-	# --- Recurse ---
-	# FIX 2: Synchronized Iteration
-	# We iterate 0 and 1 explicitly to match groups[0] and groups[1] to their split sizes.
+	# --- 8. Final Clamp and Sanity Check ---
+	var min_seg = 2
+	if groups[0].size() > 0 and groups[1].size() > 0:
+		split_pos = clampi(split_pos, min_seg, available_dist - min_seg)
+	elif groups[0].size() > 0:
+		split_pos = available_dist
 	
+	var rem_len = available_dist - split_pos
+
+	# --- 9. Recurse ---
 	var current_pos = space[axis]
 	
 	for i in range(2):
-		var size_alloc = split_counts[i]
+		var size_alloc = split_pos if i == 0 else rem_len
 		var group_rooms = groups[i]
 		
-		# If the group has rooms, it MUST have space.
 		if group_rooms.size() > 0:
 			if size_alloc <= 0:
-				push_warning("divide_space: Group %d has %d rooms but 0 space allocated! forcing 1 unit." % [i, group_rooms.size()])
-				# Emergency recovery: overlaps slightly but prevents crash/disappearance
-				size_alloc = 1 
+				push_error("Group %d requires space but got 0. size_alloc forced to 1." % i)
+				size_alloc = 1
 			
 			var sub_space = space.duplicate()
 			sub_space[axis] = current_pos
@@ -619,10 +566,19 @@ func divide_space(space: Array, rooms: Array, floor_number: int) -> void:
 			# Recursion
 			divide_space(sub_space, group_rooms, floor_number)
 			
-		# Advance position regardless of whether rooms existed, 
-		# so the math stays consistent for the next segment (if we had >2 splits)
 		current_pos += size_alloc
-
+		
+func get_min_length_for_group(grp: Array, cross_length: float) -> int:
+	if grp.is_empty(): 
+		return 0
+	var req_area = 0.0
+	for r in grp:
+		# Use min_size area as the floor requirement
+		# Assuming rooms use a min_size (e.g., 2 for 2x2 area requirement)
+		req_area += float(r.info.min_size * r.info.min_size) 
+	
+	# Minimum length needed is Area / Cross-Axis Length (use ceil for integer space)
+	return int(ceil(req_area / max(1.0, cross_length)))
 
 func is_space_external(space) -> bool:
 	return space[0] == 0 or space[0] + space[2] == max_width
@@ -878,7 +834,7 @@ func area_to_width_and_length(min_area, max_area, ratio_limit = [3,1]) -> Array:
 	var aspect_ratio = randf_range(ratio_limit[0], ratio_limit[1])
 	var length = sqrt(target_area * aspect_ratio)
 	var width = target_area / length
-
+	
 	return [width, length]
 
 func custom_room_sort(a, b):
