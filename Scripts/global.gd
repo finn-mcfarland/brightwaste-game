@@ -167,7 +167,7 @@ var all_rooms = [
 	RoomInfo.new("Airlock", 1, 16, false, true, true, false, true, false, false, [], [], [], "", ["Access"], 10),
 	RoomInfo.new("GreenHouse", 6, 72, true, false, true, false, false, false, false, [], [], [], "", ["Production"], 10),
 	RoomInfo.new("GunneryControl", 4, 12, false, false, true, true, true, false, false, [], [], [], "", ["Combat"], 30),
-	RoomInfo.new("BayGunnery", 2, 96, false, true, true, false, false, false, false, [], ["GunneryControl"], [], "", ["Combat"], 30), #not to mention we need a way to define what props could go in each room
+	RoomInfo.new("BayGunnery", 2, 32, false, true, true, false, false, false, false, [], ["GunneryControl"], [], "", ["Combat"], 30), #not to mention we need a way to define what props could go in each room
 	RoomInfo.new("Laboratory", 8, 32, true, false, true, false, false, false, false, [], [], [], "", ["Production"], 10),
 	RoomInfo.new("TrashCompactor", 4, 24, false, true, true, false, false, false, false, [], [], [], "", ["Utility"], 25),
 	RoomInfo.new("Lounge", 4, 32, false, false, false, false, false, false, false, [], [], [], "", ["Personnel"], 10), #this should not be the subroom for the prison
@@ -189,9 +189,9 @@ var all_rooms = [
 #required classes, and optional classes.
 #higher density is lower, it's how many tiles are required for a ship to have +1 person
 var ship_setups = [
-	ShipInfo.new("Transporter", 83, 378, 30, [2, 3],  ["SmallStorage", "Bridge", "Airlock"], ["", ""], ["Personnel", "Propulsion", "Transportation"], ["", "", ""]),
-	ShipInfo.new("Production", 80, 200, 30, [1, 2.5], ["Factory", "Airlock", "Bridge", "Lounge"], ["BayGunnery", ""], ["Repair", "Utility", ""], ["Production", "Personnel", "Propulsion"]),
-	ShipInfo.new("Combat", 75, 500, 30, [1, 4], ["Bridge", "Airlock", ""], ["EscapePod", "Lounge", ""], ["Combat", "Propulsion", "Personnel"], ["Secure", "Utility", "Transportation"]),
-	ShipInfo.new("Research", 100, 300, 30, [1, 2], ["Laboratory", "Medical", "Airlock", "Bridge"], ["", "", ""], ["Personnel", "", ""], ["Secure", "Propulsion", "Utility", "Administration"]),
-	ShipInfo.new("Auxiliary", 3, 20, 4, [1, 3], ["Bridge", "Airlock", ""], ["Personnel", "", ""], ["", "Propulsion", ""], ["Utility"])
+	ShipInfo.new("Transporter", 83, 378, 25, [2, 3],  ["SmallStorage", "Bridge", "Airlock"], ["", ""], ["Personnel", "Propulsion", "Transportation"], ["", "", ""]),
+	ShipInfo.new("Production", 80, 200, 25, [1, 2.5], ["Factory", "Airlock", "Bridge", "Lounge"], ["BayGunnery", ""], ["Repair", "Utility", ""], ["Production", "Personnel", "Propulsion"]),
+	ShipInfo.new("Combat", 75, 500, 25, [1, 4], ["Bridge", "Airlock", ""], ["EscapePod", "Lounge", ""], ["Combat", "Propulsion", "Personnel"], ["Secure", "Utility", "Transportation"]),
+	ShipInfo.new("Research", 100, 300, 25, [1, 2], ["Laboratory", "Medical", "Airlock", "Bridge"], ["", "", ""], ["Personnel", "", ""], ["Secure", "Propulsion", "Utility", "Administration"]),
+	ShipInfo.new("Auxiliary", 3, 20, 6, [1, 3], ["Bridge", "Airlock", ""], ["Personnel", "", ""], ["", "Propulsion", ""], ["Utility"])
 ]
