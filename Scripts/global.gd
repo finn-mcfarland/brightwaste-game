@@ -162,7 +162,7 @@ var all_rooms = [
 	RoomInfo.new("Kitchen", 4, 48, true, false, true, false, false, false, true, [], ["MessHall"], [], "", ["Personnel"], 30),
 	RoomInfo.new("Cargo", 12, 304, false, true, true, false, true, false, false, [], [], [], "", ["Transportation"], 30), #in a manner of speaking this does need external access, also consider a secure room variable - bulkhead shit
 	RoomInfo.new("SmallStorage", 2, 12, false, false, true, true, false, false, false, [], [], [], "", ["Utility"], 4),
-	RoomInfo.new("Hangar", 15, 2700, false, true, true, false, false, false, false, [], [], [], "", ["Transportation"], 80),
+	RoomInfo.new("Hangar", 15, 1300, false, true, true, false, false, false, false, [], [], [], "", ["Transportation"], 80),
 	RoomInfo.new("Factory", 16, 400, false, false, true, false, true, false, false, [], [], [], "",["Production"], 30),
 	RoomInfo.new("Airlock", 1, 16, false, true, true, false, true, false, false, [], [], [], "", ["Access"], 10),
 	RoomInfo.new("GreenHouse", 6, 72, true, false, true, false, false, false, false, [], [], [], "", ["Production"], 10),

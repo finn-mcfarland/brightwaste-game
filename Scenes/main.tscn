@@ -146,7 +146,7 @@ collision_mask = 0
 size = Vector3(2, 1, 1)
 
 [node name="Player" parent="." instance=ExtResource("2_bo1nx")]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.6279, 7.23432)
+transform = Transform3D(0.999997, -0.00236712, 0.000906625, 0.00236797, 0.999997, -0.00094403, -0.000904401, 0.00094616, 0.999999, 0, 3.6279, 7.23432)
 collision_mask = 85
 
 [node name="Console" parent="." instance=ExtResource("3_8gbba")]

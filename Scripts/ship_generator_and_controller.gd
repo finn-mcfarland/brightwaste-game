@@ -34,7 +34,7 @@ func _ready():
 func build_ship(x_size, z_size, ship_type):
 
 	var origin = Vector3.ZERO # center
-	max_width = z_size #sqrt(Global.sum(room_quantity.values()))+ship_x_size	
+	max_width = z_size #sqrt(Global.sum(room_quantity.values()))+ship_x_size
 	max_length = x_size
 	
 	
@@ -222,6 +222,7 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 	
 	#region CODE THAT ASSIGNS ROOMS TO SPACES (COMPACT SINGLE PASS)
 	var space_left : Array = []
+	var slots_left : Array = []
 	var rooms_assigned_to_spaces : Array = []
 	var external_capacity : Array = []
 
@@ -229,6 +230,7 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 	for space in available_space_rooms:
 		var area = space[2] * space[3]
 		space_left.append(area)
+		slots_left.append(floor(space[2]/2)*floor(space[3]/2))
 		rooms_assigned_to_spaces.append([])
 		external_capacity.append(space[3] if is_space_external(space) else 0)
 
@@ -282,27 +284,32 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 	for group in ordered_groups:
 		var sum_min = 0.0
 		var sum_max = 0.0
+		var slots_needed = 0
 		var ext_multiplier = 0
 		var group_classes := {}
 		var any_secure = false
+		var current_space
 
 		for r in group:
 			sum_min += r.info.min_size
 			sum_max += r.info.max_size
+			slots_needed += 1
 			if r.info.needs_external_access:
 				ext_multiplier += 1
 			group_classes[r.info.room_class] = true
 			if r.info.is_secure_room:
 				any_secure = true
 
-		var estimated_use = clamp((sum_min *1.5 ) + 4, sum_min, sum_max)
+		var estimated_use = clamp((sum_min * 1.25 ) + 3, sum_min, sum_max)
 		
 		var best_index = -1
 		var best_score = 1e9
 
 		for i in range(available_space_rooms.size()):
+			current_space = available_space_rooms[i]
 			var area = space_left[i]
-			if area < 8:
+			var slots = slots_left[i]
+			if area < 8 or slots == slots_needed:
 				estimated_use = sum_min
 			var is_empty_space = rooms_assigned_to_spaces[i].is_empty()
 
@@ -310,6 +317,8 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 			if area < estimated_use:
 				continue
 			if ext_multiplier > 0 and external_capacity[i] < ext_multiplier*3:
+				continue
+			if slots < slots_needed or slots < 1:
 				continue
 
 			# --- Scoring ---
@@ -321,9 +330,17 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 
 			# prefer empty spaces slightly
 			if is_empty_space:
-				score -= 0.6
+				score -= 0.4
 				#if area > sum_max * 1.5:
 				#	score += (area - sum_max * 1.5) / (area + 1.0)
+			else:
+				var total_current_max = 0
+				
+				for r2 in rooms_assigned_to_spaces[i]:
+					total_current_max += r2.info.max_size
+					if total_current_max + sum_max < current_space[2] * current_space[3]:
+						score -= 0.7
+						break
 					
 			"""
 			# small penalty if same class already present
@@ -339,7 +356,6 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 					if r2.info.is_secure_room:
 						score -= 0.2
 						break
-						
 			"""
 
 			# stable tie-breaker
@@ -353,7 +369,7 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 		if best_index >= 0:
 			var allocate = min(space_left[best_index], min(sum_max, max(sum_min, estimated_use)))
 			space_left[best_index] -= allocate
-
+			slots_left[best_index] -= slots_needed 
 			for r in group:
 				rooms_assigned_to_spaces[best_index].append(r)
 
@@ -380,356 +396,416 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 	for i in range(len(available_space_rooms)):
 		#this is a patch . we need to not have empty spaces, for the script below to work
 		#i would also like to place corridors through large spaces if they're full of small rooms[FIX]
-		if rooms_assigned_to_spaces[i] == []: 
+		if rooms_assigned_to_spaces[i] == []:
 			print("empty space - removed from division, as recursive room dividing algorithm assumes contents")
 			continue
 		divide_space(available_space_rooms[i], rooms_assigned_to_spaces[i], origin.y)
 		
 # --- MAIN DIVIDE FUNCTION ---
+# --- MAIN DIVIDE FUNCTION ---
 func divide_space(space: Array, rooms: Array, floor_number: int) -> void:
-	# --- 1. Base Cases ---
 	if rooms.is_empty():
 		return
+
+	var s_x = int(space[0]); var s_z = int(space[1])
+	var s_w = int(space[2]); var s_d = int(space[3])
+	var working_space = [s_x, s_z, s_w, s_d]
+
+	# --- 2. CAPACITY CHECK ---
+	var slots_x = max(1, floor(s_w / 2)) 
+	var slots_z = max(1, floor(s_d / 2))
+	var max_capacity = slots_x * slots_z
 	
-	# space format: [x, y, width, depth]
-	var s_w = int(space[2]) # Width (X)
-	var s_d = int(space[3]) # Depth (Z)
+	if rooms.size() > max_capacity:
+		print(space)
+		print(rooms)
+		push_error("CRITICAL: Overcrowded. %d rooms in space for %d." % [rooms.size(), max_capacity])
+		return 
 
-	# Enforce that the *usable* dimensions are even numbers (round down)
-	# This avoids creating 1-wide strips after splits.
-	if s_w > 1:
-		s_w = (s_w / 2) * 2
-	if s_d > 1:
-		s_d = (s_d / 2) * 2
-	# apply back to space copy so subspaces inherit even dims
-	var working_space = space.duplicate()
-	working_space[2] = s_w
-	working_space[3] = s_d
-
-	# --- Base Case: two rooms (adjacent pair must be placed) ---
-	if rooms.size() == 2:
-		var r1 = rooms[0]
-		var r2 = rooms[1]
-
-		# Choose split axis by longest side of the working space
-		var axis = 0 if s_w >= s_d else 1
-		var available_dist = s_w if axis == 0 else s_d
-		var cross_length = s_d if axis == 0 else s_w
-
-		# Determine which side (0 = left/top, 1 = right/bottom) is external (if any)
-		var external_side_idx = -1
-		if working_space[0] == 0:
-			external_side_idx = 0
-		elif working_space[0] + working_space[2] == max_width:
-			external_side_idx = 1
-
-		# If one or both need external access, try to put the needing room on the external side
-		var r1_ext = r1.info.needs_external_access
-		var r2_ext = r2.info.needs_external_access
-
-		# Compute minimum required lengths for each room (in this axis) with helper
-		# For single room, min requirement is its min_size (interpreted as side length)
-		
-
-		var min_len_r1 = min_len_for_single(r1)
-		var min_len_r2 = min_len_for_single(r2)
-
-		# If external side preference exists, assign split so that external-needed room sits on that side.
-		var split_pos = 0
-		if external_side_idx != -1:
-			# side 0 = left/top = r_on_side0 ; side 1 = r_on_side1
-			var r_on_side0 = null
-			var r_on_side1 = null
-			# put external-required room on the external side if exactly one requires it
-			if r1_ext and not r2_ext:
-				if external_side_idx == 0:
-					r_on_side0 = r1; r_on_side1 = r2
-				else:
-					r_on_side0 = r2; r_on_side1 = r1
-			elif r2_ext and not r1_ext:
-				if external_side_idx == 0:
-					r_on_side0 = r2; r_on_side1 = r1
-				else:
-					r_on_side0 = r1; r_on_side1 = r2
-			else:
-				# neither or both require external -> place by min_size ratio
-				# compute proportional split based on min sizes
-				var total_min = float(min_len_r1 + min_len_r2)
-				var ratio = min_len_r1 / max(1.0, total_min)
-				split_pos = int(floor(available_dist * ratio))
-				# snap to even and clamp
-				if split_pos < 2: split_pos = 2
-				if split_pos > available_dist - 2: split_pos = available_dist - 2
-				if split_pos % 2 == 1: split_pos -= 1
-			# if we assigned r_on_side0/r_on_side1 above, compute split from their min lengths
-			if r_on_side0 != null:
-				var ml0 = min_len_for_single(r_on_side0)
-				var ml1 = min_len_for_single(r_on_side1)
-				# ensure we reserve at least ml0 for side0
-				split_pos = ml0
-				# enforce even/clamps
-				if split_pos < 2: split_pos = 2
-				if split_pos > available_dist - 2: split_pos = available_dist - 2
-				if split_pos % 2 == 1: split_pos -= 1
-
-				# Place accordingly: compute s0 and s1
-				var s0 = working_space.duplicate()
-				s0[2 + axis] = split_pos
-				var s1 = working_space.duplicate()
-				s1[axis] += split_pos
-				s1[2 + axis] = available_dist - split_pos
-
-				# populate: r_on_side0 -> s0, r_on_side1 -> s1
-				r_on_side0.populate_room(Vector3(s0[2], room_height, s0[3]), Vector3(s0[0], floor_number * room_height, s0[1]))
-				r_on_side1.populate_room(Vector3(s1[2], room_height, s1[3]), Vector3(s1[0], floor_number * room_height, s1[1]))
-				return
-		else:
-			# No clear external side -> use min-size proportional split
-			var total_min = float(min_len_r1 + min_len_r2)
-			var ratio = min_len_r1 / max(1.0, total_min)
-			split_pos = int(floor(available_dist * ratio))
-			if split_pos < 2: split_pos = 2
-			if split_pos > available_dist - 2: split_pos = available_dist - 2
-			if split_pos % 2 == 1: split_pos -= 1
-
-		# If we reach here and split_pos is still 0, fallback
-		if split_pos <= 0:
-			split_pos = max(2, int(available_dist / 2))
-			if split_pos % 2 == 1: split_pos -= 1
-
-		# Create subspaces and populate (order: rooms[0] -> left/top ; rooms[1] -> right/bottom)
-		var s0 = working_space.duplicate()
-		s0[2 + axis] = split_pos
-		var s1 = working_space.duplicate()
-		s1[axis] += split_pos
-		s1[2 + axis] = available_dist - split_pos
-
-		# Populate r1 in s0 and r2 in s1 (original ordering). If you'd rather honor adjacency direction,
-		# swap here based on r1_ext/r2_ext logic - we've tried to place external folks above already.
-		r1.populate_room(Vector3(s0[2], room_height, s0[3]), Vector3(s0[0], floor_number * room_height, s0[1]))
-		r2.populate_room(Vector3(s1[2], room_height, s1[3]), Vector3(s1[0], floor_number * room_height, s1[1]))
-		return
-
-	# --- Base Case: single room fills whole subspace ---
+	# --- 3. Base Case: Single Room ---
 	if rooms.size() == 1:
 		var r = rooms[0]
-		# enforce minimum even sizes for the single room
-		var width = max(2, s_w)
-		var depth = max(2, s_d)
-		if width % 2 == 1: width -= 1
-		if depth % 2 == 1: depth -= 1
-		r.populate_room(Vector3(width, room_height, depth), Vector3(working_space[0], floor_number * room_height, working_space[1]))
+		r.populate_room(Vector3(s_w, room_height, s_d), Vector3(s_x, floor_number * room_height, s_z))
 		return
 
-	# --- 3. Create pairs and singles; we collect plain room objects into a single pool ---
+	# --- 4. Grouping Strategy (Adjacency Pairing) ---
 	var pairs: Array = []
 	var singles: Array = []
 	var assigned_rooms: Array = []
 
 	for i in range(rooms.size()):
 		var r1 = rooms[i]
-		if assigned_rooms.has(r1):
-			continue
+		if assigned_rooms.has(r1): continue
 		var found_pair = false
 		for j in range(i + 1, rooms.size()):
 			var r2 = rooms[j]
-			if assigned_rooms.has(r2):
-				continue
-			var r1_wants_r2 = r1.info.adjacent_room_requirements.has(r2.info.room_name)
-			var r2_wants_r1 = r2.info.adjacent_room_requirements.has(r1.info.room_name)
-			if r1_wants_r2 or r2_wants_r1:
+			if assigned_rooms.has(r2): continue
+			if r1.info.adjacent_room_requirements.has(r2.info.room_name) or r2.info.adjacent_room_requirements.has(r1.info.room_name):
 				pairs.append([r1, r2])
-				assigned_rooms.append(r1)
-				assigned_rooms.append(r2)
+				assigned_rooms.append(r1); assigned_rooms.append(r2)
 				found_pair = true
 				break
 		if not found_pair:
 			singles.append(r1)
 			assigned_rooms.append(r1)
 
-	# --- 4. Flatten pairs into a single pool of room objects and assign to groups ---
-	var groups = [[], []] # each group is an array of room objects
-	var pool: Array = []
-	# flatten pairs into pool (we keep pairs as atomic for ordering but in group we push rooms individually)
-	for p in pairs:
-		# p is [r1,r2] - append as an item to pool so we can preserve pair adjacency if needed
-		pool.append(p)
-	for s in singles:
-		pool.append(s)
+	var pool = []
+	pool.append_array(pairs)
+	pool.append_array(singles)
 
-	# Determine which side (0/1) is external for the current space (left/right)
-	var external_side_idx = -1
-	if working_space[0] == 0:
-		external_side_idx = 0
-	elif working_space[0] + working_space[2] == max_width:
-		external_side_idx = 1
-
-	# helper counts per group
-	var current_counts = [0, 0]
-	for item in pool:
-		var is_pair = item is Array
-		var needs_external = false
-		if is_pair:
-			for r in item:
-				if r.info.needs_external_access:
-					needs_external = true
-		else:
-			if item.info.needs_external_access:
-				needs_external = true
-
-		var g_idx = -1
-		if needs_external and external_side_idx != -1:
-			g_idx = external_side_idx
-		else:
-			# simple balancing by number of rooms
-			g_idx = 0 if current_counts[0] <= current_counts[1] else 1
-
-		# Add to group: if pair, append both rooms individually so groups are plain room arrays
-		if is_pair:
-			for r in item:
-				groups[g_idx].append(r)
-			current_counts[g_idx] += 2
-		else:
-			groups[g_idx].append(item)
-			current_counts[g_idx] += 1
-
-	# --- 5. Circuit breaker: avoid empty groups (split middle of full group) ---
-	if groups[0].is_empty() and not groups[1].is_empty():
-		var full = groups[1]
-		var mid = int(full.size() / 2)
-		groups[0] = full.slice(0, mid)
-		groups[1] = full.slice(mid, full.size())
-	elif groups[1].is_empty() and not groups[0].is_empty():
-		var full = groups[0]
-		var mid = int(full.size() / 2)
-		groups[0] = full.slice(0, mid)
-		groups[1] = full.slice(mid, full.size())
-
-	# --- 6. Split Axis selection (by longest side) ---
+	# --- 5. Axis Selection (Robust) ---
+	var touches_left = (s_x == 0)
+	var touches_right = (s_x + s_w == max_width) 
+	
+	# Default: Split the longest side
 	var axis = 0 if s_w >= s_d else 1
+	
+	# Check External Needs
+	var ext_needs_count = 0
+	for item in pool:
+		var item_rooms = item if item is Array else [item]
+		for r in item_rooms:
+			if r.info.needs_external_access: ext_needs_count += 1
+	
+	# OVERRIDE: If multiple external needs exist, try to pick the axis that gives BOTH children wall access.
+	# Axis 1 (Horizontal Split) keeps Left/Right wall access for both Top and Bottom children.
+	# CRITICAL FIX: Only force this override if the depth is actually large enough to be split (>= 4).
+	# Otherwise, we create a tiny room that causes overflow.
+	if ext_needs_count > 1 and (touches_left or touches_right):
+		if s_d >= 4: 
+			axis = 1
+
 	var available_dist = s_w if axis == 0 else s_d
-	var cross_length = s_d if axis == 0 else s_w
+	var valid_groups_for_ext = []
+	
+	if axis == 0: # Vertical Split (Left | Right)
+		if touches_left: valid_groups_for_ext.append(0)
+		if touches_right: valid_groups_for_ext.append(1)
+	else: # Horizontal Split (Top / Bottom) - Both touch the side walls
+		if touches_left or touches_right:
+			valid_groups_for_ext.append(0); valid_groups_for_ext.append(1)
 
-	# Ensure available_dist is even and >= 2
-	if available_dist < 2:
-		push_error("Available distance too small (%d) for splitting; aborting." % available_dist)
-		return
-	available_dist = int((available_dist / 2) * 2)
-
-	# --- 7. Compute min lengths for each group (using helper) ---
-	var min_len_0 = get_min_length_for_group(groups[0], cross_length)
-	var min_len_1 = get_min_length_for_group(groups[1], cross_length)
-
-	# If the min lengths alone exceed available distance, warn and squeeze proportionally
-	var total_req = min_len_0 + min_len_1
-	var split_pos = 0
-	if total_req > available_dist:
-		var total_min_req = float(min_len_0 + min_len_1)
-		var ratio = 0.0
-		if total_min_req > 0:
-			ratio = float(min_len_0) / total_min_req
-		split_pos = int(floor(available_dist * ratio))
-		# snapping/clamping to even
-		if split_pos < 2: split_pos = 2
-		if split_pos > available_dist - 2: split_pos = available_dist - 2
-		if split_pos % 2 == 1: split_pos -= 1
-		push_warning("Map Overcrowded: total required %d > available %d; squeezed." % [total_req, available_dist])
-	else:
-		# normal distribution: give each group its min and distribute slack by room count ratio
-		var slack = available_dist - total_req
-		var total_rooms = float(groups[0].size() + groups[1].size())
-		var count_ratio = 0.5
-		if total_rooms > 0:
-			count_ratio = float(groups[0].size()) / total_rooms
-		split_pos = min_len_0 + int(round(slack * count_ratio))
-		# snap to even and clamp
-		if split_pos < 2: split_pos = 2
-		if split_pos > available_dist - 2: split_pos = available_dist - 2
-		if split_pos % 2 == 1: split_pos -= 1
-
-	# Final clamp safety
-	var min_seg = 2
-	if groups[0].size() > 0 and groups[1].size() > 0:
-		split_pos = clampi(split_pos, min_seg, available_dist - min_seg)
-	elif groups[0].size() > 0:
-		split_pos = available_dist
-	else:
-		split_pos = 0
-
-	var rem_len = available_dist - split_pos
-	if rem_len < 0:
-		rem_len = 0
-
-	# --- 8. Recurse into each subspace (ensuring we provide even sizes) ---
-	var current_pos = working_space[axis]
-	for i in range(2):
-		var size_alloc = split_pos if i == 0 else rem_len
-		var group_rooms = groups[i]
-		if group_rooms.size() == 0:
-			current_pos += size_alloc
-			continue
-
-		if size_alloc <= 0:
-			push_error("Group %d requires space but got 0. Forcing 2." % i)
-			size_alloc = 2
-
-		# ensure even
-		if size_alloc % 2 == 1:
-			size_alloc -= 1
-			if size_alloc < 2:
-				size_alloc = 2
-
-		var sub_space = working_space.duplicate()
-		sub_space[axis] = current_pos
-		sub_space[2 + axis] = size_alloc
-
-		# Recurse with the rooms for this group
-		divide_space(sub_space, group_rooms, floor_number)
-
-		current_pos += size_alloc
+	# --- 6. Group Assignment ---
+	var groups = [[], []]
+	
+	# CASE A: Final Adjacency Pair (The "Last Split")
+	if pool.size() == 1 and pool[0] is Array:
+		var pair = pool[0]
 		
-func min_len_for_single(r):
-			# Ensure at least the room's min_size, but not less than 2 and make even
-			var m = int(r.info.min_size)
-			if m < 2: m = 2
-			if m % 2 == 1: m += 1
-			return m
+		# 1. Check if the current axis actually fits 2 rooms (min 4 units)
+		# If not, and the other axis IS big enough, flip the axis.
+		if available_dist < 4:
+			var alt_dist = s_d if axis == 0 else s_w
+			if alt_dist >= 4:
+				axis = 1 - axis
+				available_dist = alt_dist
+				# Re-evaluate valid external sides for the new axis
+				valid_groups_for_ext.clear()
+				if axis == 0:
+					if touches_left: valid_groups_for_ext.append(0)
+					if touches_right: valid_groups_for_ext.append(1)
+				else:
+					if touches_left or touches_right: valid_groups_for_ext.append(0); valid_groups_for_ext.append(1)
+		
+		# 2. Assign Rooms
+		var r0 = pair[0]
+		var r1 = pair[1]
+		
+		# 3. FIX ADJACENCY ORIENTATION
+		# Check if one room needs ext access and is about to be put in a group without it
+		var r0_needs = r0.info.needs_external_access
+		var r1_needs = r1.info.needs_external_access
+		
+		var g0_valid = valid_groups_for_ext.has(0)
+		var g1_valid = valid_groups_for_ext.has(1)
+		
+		# If r0 needs it but G0 is invalid, and G1 IS valid... SWAP.
+		if r0_needs and not g0_valid and g1_valid:
+			groups[0] = [r1]
+			groups[1] = [r0]
+		# If r1 needs it but G1 is invalid, and G0 IS valid... SWAP (implicit via assignment)
+		elif r1_needs and not g1_valid and g0_valid:
+			groups[0] = [r1] # Put r1 in the valid group 0
+			groups[1] = [r0]
+		else:
+			# Default
+			groups[0] = [r0]
+			groups[1] = [r1]
 			
-# --- HELPER: compute minimum length required for a group of room objects along the split axis ---
-func get_min_length_for_group(grp: Array, cross_length: float) -> int:
-	if grp.is_empty():
-		return 0
-	var req_area = 0.0
-	for r in grp:
-		# interpret r.info.min_size as the minimum side length (e.g., 2 means 2x2)
-		var m = float(r.info.min_size)
-		if m < 2.0:
-			m = 2.0
-		req_area += (m * m)
+	# CASE B: Standard Partitioning
+	else:
+		var solved_groups = find_valid_partition(pool, s_w, s_d, axis, valid_groups_for_ext)
+		
+		# Retry with other axis if failed
+		if solved_groups.is_empty():
+			var alt_axis = 1 - axis
+			var alt_dist = s_d if alt_axis == 0 else s_w
+			# Quick valid_ext recalc for retry
+			var alt_valid_ext = [] 
+			if alt_axis == 0: 
+				if touches_left: alt_valid_ext.append(0)
+				if touches_right: alt_valid_ext.append(1)
+			else: 
+				if touches_left or touches_right: alt_valid_ext.append(0); alt_valid_ext.append(1)
+				
+			solved_groups = find_valid_partition(pool, s_w, s_d, alt_axis, alt_valid_ext)
+			
+			if not solved_groups.is_empty():
+				axis = alt_axis
+				available_dist = alt_dist
+				# print("Swapped axis to solve layout")
 
-	# Minimum length needed along axis is area / cross_length
-	var cross = max(1.0, float(cross_length))
-	var length_needed = int(ceil(req_area / cross))
+		if solved_groups.is_empty():
+			push_error(rooms)
+			push_error(space)
+			push_error("CRITICAL: No Valid Partition found. %d rooms." % rooms.size())
+			return
+		
+		groups = solved_groups
 
-	# Make length even, at least 2
-	if length_needed < 2:
-		length_needed = 2
-	if length_needed % 2 == 1:
-		length_needed += 1
-	return length_needed
+	# --- 7. Calculate Split Position (with External Wall Capacity Clamp) ---
+	var cross_dim_size = s_d if axis == 0 else s_w
+	var cross_slots = max(1, int(cross_dim_size / 2))
+	
+	var n0 = get_room_count(groups[0])
+	var n1 = get_room_count(groups[1])
+	
+	# Standard Area-based rigid length (stacking rooms)
+	var req_len_0 = get_rigid_min_length(n0, cross_slots)
+	var req_len_1 = get_rigid_min_length(n1, cross_slots)
+	
+	# --- NEW: External Wall Perimeter Check ---
+	# If we are splitting the wall (Horizontal Split / Axis 1), we must ensure 
+	# each group gets enough WALL LENGTH (2 units per external room).
+	if axis == 1:
+		var ext_c0 = 0
+		for item in flatten_group(groups[0]):
+			if item.info.needs_external_access: ext_c0 += 1
+			
+		var ext_c1 = 0
+		for item in flatten_group(groups[1]):
+			if item.info.needs_external_access: ext_c1 += 1
+			
+		# The wall length needed is simply 2 * external_room_count
+		req_len_0 = max(req_len_0, ext_c0 * 2)
+		req_len_1 = max(req_len_1, ext_c1 * 2)
+
+	var total_req = req_len_0 + req_len_1
+	var split_pos = 0
+
+	if total_req >= available_dist:
+		# Tight fit: Give exactly what is needed based on ratio
+		var ratio = float(req_len_0) / float(max(1, total_req))
+		split_pos = int(available_dist * ratio)
+	else:
+		# Slack exists: Distribute slack based on total room count
+		var slack = available_dist - total_req
+		var ratio = float(n0) / float(max(1, n0 + n1))
+		split_pos = req_len_0 + int(slack * ratio)
+
+	# Final Hard Clamps
+	# Ensure we don't violate the minimums we just calculated
+	split_pos = max(split_pos, req_len_0)
+	split_pos = min(split_pos, available_dist - req_len_1)
+	
+	# Sanity check (absolute min 2)
+	split_pos = max(split_pos, 2)
+	split_pos = min(split_pos, available_dist - 2)
+
+	# --- 8. Recurse ---
+	var s0 = working_space.duplicate()
+	var s1 = working_space.duplicate()
+
+	s0[2 + axis] = split_pos             
+	s1[axis] += split_pos                
+	s1[2 + axis] = available_dist - split_pos 
+	
+	divide_space(s0, flatten_group(groups[0]), floor_number)
+	divide_space(s1, flatten_group(groups[1]), floor_number)
+
+func get_room_count(group_arr: Array) -> int:
+	var c = 0
+	for item in group_arr:
+		if item is Array: c += 2
+		else: c += 1
+	return c
+
+func flatten_group(group_arr: Array) -> Array:
+	var out = []
+	for item in group_arr:
+		if item is Array:
+			out.append(item[0])
+			out.append(item[1])
+		else:
+			out.append(item)
+	return out
+
+func find_valid_partition(pool: Array, s_w: int, s_d: int, axis: int, valid_groups_for_ext: Array) -> Array:
+	var forced_0 = []
+	var forced_1 = []
+	var flex_ext = []
+	var flex_int = []
+
+	# 1. Categorize Rooms
+	for item in pool:
+		var item_rooms = item if item is Array else [item]
+		var needs_ext = false
+		for r in item_rooms:
+			if r.info.needs_external_access:
+				needs_ext = true
+				break
+		
+		if needs_ext:
+			var can_0 = valid_groups_for_ext.has(0)
+			var can_1 = valid_groups_for_ext.has(1)
+			
+			if can_0 and not can_1: forced_0.append(item)
+			elif can_1 and not can_0: forced_1.append(item)
+			elif can_0 and can_1: flex_ext.append(item)
+			else: return [] # Impossible
+		else:
+			flex_int.append(item)
+
+	# 2. Build Candidate Permutations (The Fix)
+	# We create different sort orders to ensure we find size-combinations (like Pair+Single)
+	var all_flexible = []
+	all_flexible.append_array(flex_ext)
+	all_flexible.append_array(flex_int)
+	
+	var candidate_lists = []
+	
+	# A. Balanced Sort (Alternating Ext/Int - Good for wall crowding)
+	var list_balanced = []
+	var g0_ext = []; var g1_ext = []
+	for x in range(flex_ext.size()):
+		if x % 2 == 0: g0_ext.append(flex_ext[x])
+		else: g1_ext.append(flex_ext[x])
+	list_balanced.append_array(g0_ext)
+	list_balanced.append_array(flex_int) # Append internals after
+	list_balanced.append_array(g1_ext)   # Sandwich method
+	candidate_lists.append(list_balanced)
+	
+	# B. Size Ascending (Singles first - Good for fitting small remainders)
+	var list_asc = all_flexible.duplicate()
+	list_asc.sort_custom(func(a, b): return get_room_count([a]) < get_room_count([b]))
+	candidate_lists.append(list_asc)
+
+	# C. Size Descending (Pairs first - Good for main chunks)
+	var list_desc = all_flexible.duplicate()
+	list_desc.sort_custom(func(a, b): return get_room_count([a]) > get_room_count([b]))
+	candidate_lists.append(list_desc)
+
+	# 3. Middle-Out Search
+	var total_flex = all_flexible.size()
+	var search_indices = []
+	var mid = int(total_flex / 2)
+	search_indices.append(mid)
+	for i in range(1, mid + 2):
+		if mid - i >= 0: search_indices.append(mid - i)
+		if mid + i <= total_flex: search_indices.append(mid + i)
+
+	# Try every split index on every list type
+	for i in search_indices:
+		for candidate_list in candidate_lists:
+			
+			var g0 = forced_0.duplicate()
+			var g1 = forced_1.duplicate()
+			
+			# Slice from the current candidate list
+			if i > 0:
+				g0.append_array(candidate_list.slice(0, i))
+			if i < total_flex:
+				g1.append_array(candidate_list.slice(i, total_flex))
+				
+			if g0.is_empty() or g1.is_empty(): continue
+
+			# --- VALIDATION ---
+			# 1. Area Check
+			if not can_split(s_w, s_d, axis, get_room_count(g0), get_room_count(g1)):
+				continue
+
+			# 2. Wall Perimeter Check (From previous fix)
+			if axis == 1:
+				var ext_c0 = count_external_in_group(g0)
+				var ext_c1 = count_external_in_group(g1)
+				var total_wall_needed = (ext_c0 * 2) + (ext_c1 * 2)
+				if total_wall_needed > s_d:
+					continue
+			
+			# Found a valid configuration!
+			return [g0, g1]
+
+	return []
+
+# --- Helper ---
+func count_external_in_group(grp: Array) -> int:
+	var c = 0
+	for item in grp:
+		var rooms = item if item is Array else [item]
+		for r in rooms:
+			if r.info.needs_external_access:
+				c += 1
+				break # Count item once if it has external needs (or loop if you count rooms)
+				 # Note: If 'item' is a pair, do you need 2 wall units or 4?
+				 # If the pair is side-by-side against wall, 4. If one behind other, 2.
+				 # Safer to assume '2 per room' if both need it.
+	
+	# Accurate count of actual room objects needing access
+	var actual_count = 0
+	for item in grp:
+		var rooms = item if item is Array else [item]
+		for r in rooms:
+			if r.info.needs_external_access:
+				actual_count += 1
+	return actual_count
+
+func get_rigid_min_length(room_count: int, cross_slots: int) -> int:
+	if room_count == 0: return 0
+	
+	var rows_needed = ceil(float(room_count) / float(cross_slots))
+	return int(rows_needed * 2)
+		
 
 # --- HELPER: is the space external (left/right) ---
 func is_space_external(space) -> bool:
 	# true if the subspace touches the left (x==0) or right (x+width==max_width) boundary
 	return space[0] == 0 or (space[0] + space[2] == max_width)
 
+# --- NEW/REVISED HELPER FUNCTIONS ---
 
-# Helper: Check for class overlap
-func has_class_overlap(room_class: Array, class_dict: Dictionary) -> bool:
-	for cls in room_class:
-		if class_dict.has(cls):
-			return true
-	return false
+# Replaces 'find_valid_groups' entirely
+func can_split(space_w, space_d, axis, n0, n1) -> bool:
+	# Axis 0 = Vertical Split (Left | Right)
+	# We check if items fit into the Width (space_w) given the Depth (space_d)
+	
+	if axis == 0:
+		var cross_slots = max(1, floor(space_d / 2)) # Use floor!
+		var req0 = ceil(float(n0) / cross_slots) * 2
+		var req1 = ceil(float(n1) / cross_slots) * 2
+		return (req0 + req1) <= space_w
+	
+	# Axis 1 = Horizontal Split (Top / Bottom)
+	else:
+		var cross_slots = max(1, floor(space_w / 2)) # Use floor!
+		var req0 = ceil(float(n0) / cross_slots) * 2
+		var req1 = ceil(float(n1) / cross_slots) * 2
+		return (req0 + req1) <= space_d
+
+
+func canonical_key(g0: Array, g1: Array) -> String:
+	var k0 := []
+	var k1 := []
+	for r in g0:
+		k0.append(r)
+	for r in g1:
+		k1.append(r)
+	k0.sort()
+	k1.sort()
+	return str(k0) + "|" + str(k1)	
+		
+
+
+
 
 func group_rooms_by_adjacency(rooms: Array, room_counts: Dictionary) -> Array:
 	var unassigned := rooms.duplicate()
@@ -759,7 +835,7 @@ const OVERLAP_WEIGHT := 0.8
 
 func _estimate_room_size(room) -> float:
 	# Prefer midpoint between min and max if available, else fallback
-	return clamp((room.min_size*1.2) + 2, 4, room.max_size)
+	return clamp(min(room.min_size*3, room.max_size/2), room.min_size, room.max_size) 
 
 
 func assign_group_to_floor(group: Array,count_map: Dictionary,floors: Array,floor_classes: Array,floor_loads: Array,floor_areas: Array) -> void:
@@ -809,7 +885,7 @@ func assign_group_to_floor(group: Array,count_map: Dictionary,floors: Array,floo
 		cost += balance_penalty * BALANCE_WEIGHT
 
 		# Strong non-linear penalty for nearing full
-		cost += pow(load_ratio, 3.0) * NEAR_FULL_WEIGHT
+		cost += pow(load_ratio, 1.5) * NEAR_FULL_WEIGHT
 
 		# Class overlap penalty (graded)
 		var overlap_count := 0
@@ -818,19 +894,19 @@ func assign_group_to_floor(group: Array,count_map: Dictionary,floors: Array,floo
 				overlap_count += 1
 		var overlap_ratio = float(overlap_count) / float(max(1, group_classes.size()))
 		cost += overlap_ratio * OVERLAP_WEIGHT
-		if overlap_ratio > 0.5:
-			cost += 0.2  # extra penalty if more than half overlap
+		if overlap_ratio > 0.4:
+			cost += 0.4  # extra penalty if more than half overlap
 
 		# Slight bonus for adding new class diversity
 		if overlap_ratio == 0.0:
-			cost -= 0.1
+			cost -= 0.3
 
 		# Tiny noise to break ties
-		cost += randf() * 0.02
+		cost += randf() * 0.4
 
 		# Slight preference to emptier floors (less rooms currently)
 		if floors[i].size() <= 1:
-			cost -= 0.05
+			cost -= 0.1
 
 		if cost < min_cost:
 			min_cost = cost
