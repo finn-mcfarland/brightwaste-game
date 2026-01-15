@@ -38,7 +38,7 @@ shadow_enabled = true
 [node name="stage" type="Node3D" parent="."]
 
 [node name="CSGBox3D" type="CSGBox3D" parent="stage"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, -1, -0.5, 0)
+transform = Transform3D(0.999999, -0.000838269, -0.000697872, 0.000837469, 0.999999, -0.00115477, 0.000698832, 0.00115419, 0.999999, -1, -0.5, 0)
 use_collision = true
 collision_layer = 13
 collision_mask = 0
@@ -54,7 +54,7 @@ size = Vector3(2, 1, 41.2363)
 material = SubResource("StandardMaterial3D_kry3j")
 
 [node name="CSGBox3D2" type="CSGBox3D" parent="stage"]
-transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1.8, -8.5)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 5, 1.17897, -8.5)
 use_collision = true
 collision_layer = 13
 collision_mask = 0
@@ -70,6 +70,13 @@ size = Vector3(2, 1, 5)
 
 [node name="bridge2" type="CSGBox3D" parent="stage"]
 transform = Transform3D(1, 0, 0, 0, 0.989359, 0.145496, 0, -0.145496, 0.989359, 7, 2.10563, 29.0413)
+use_collision = true
+collision_layer = 4
+collision_mask = 0
+size = Vector3(2, 1, 39)
+
+[node name="bridge13" type="CSGBox3D" parent="stage"]
+transform = Transform3D(-1, 2.20579e-08, -1.49376e-07, 0, 0.989272, 0.146083, 1.50996e-07, 0.146083, -0.989272, 5.74552, 7.41354, 28)
 use_collision = true
 collision_layer = 4
 collision_mask = 0
@@ -146,7 +153,7 @@ collision_mask = 0
 size = Vector3(2, 1, 1)
 
 [node name="Player" parent="." instance=ExtResource("2_bo1nx")]
-transform = Transform3D(0.999997, -0.00236712, 0.000906625, 0.00236797, 0.999997, -0.00094403, -0.000904401, 0.00094616, 0.999999, 0, 3.6279, 7.23432)
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 3.6279, 7.23432)
 collision_mask = 85
 
 [node name="Console" parent="." instance=ExtResource("3_8gbba")]

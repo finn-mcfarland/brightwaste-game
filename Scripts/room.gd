@@ -21,6 +21,7 @@ func _make_room(room_info):
 func populate_room(_size, _pos):
 	size = _size
 	position = _pos
+	
 	var s = BoxShape3D.new()
 	s.size = size
 	$CorridorEnforce.position = size/2

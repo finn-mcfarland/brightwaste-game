@@ -17,6 +17,7 @@ var wiring_layouts = ["fractal_grid", "mininum_spanning_tree", "regular_tree"]
 @onready var corridor_map := $Corridor
 
 func _ready():
+	randomize()
 	corridor_map.cell_size = Vector3(tile_size,room_height,tile_size)
 	null
 	# Select random ship type and define levels
@@ -43,7 +44,7 @@ func build_ship(x_size, z_size, ship_type):
 	var floor_sizes: Array = []
 	var floor_areas_for_room_so_i_can_skip_the_computation: Array = []
 	var area = x_size * z_size
-	var base_floor_count = round(clamp(area / 125.0, 1, 2))
+	var base_floor_count = round(clamp(area / 125.0, 1, 4))
 	var floor_count = base_floor_count if x_size >= 5 else max(1, base_floor_count - 1)
 	print("floors " + str(floor_count))
 	for floor in range(floor_count):
@@ -96,49 +97,77 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 	for width_info in width_array:
 		var total_width = width_info[0]
 		var segment_length = width_info[1]
-	 
 		var new_rooms = []
-	 
-		# Corridor stays unchanged
+		
+		# Corridor/Line logic
 		draw_line(total_width, Vector3.RIGHT, sliding_origin)
-	 
-		var is_symmetrical = randf() > 1.0 and total_width >= 8
-	 
+		
+		# 1. Determine if Symmetry is even allowed (Constraint: Width 8+)
+		var is_symmetrical = false
+		if total_width >= 8:
+			is_symmetrical = randf() > 0.6 # Set probability here (e.g., 50%)
+
+		var left_width: int
+		var right_width: int
+
 		if is_symmetrical:
-			# Symmetrical split
-			var left_width = randi_range(2, int(total_width / 3))
-			var right_width = left_width
-			var center_width = total_width - left_width - right_width - 2 # exclude corridor
-	 
-			if center_width == 1:
-				center_width = 2
-				left_width = max(2, left_width - 1)
-				right_width = max(2, right_width - 1)
-	 
+			# Symmetry logic for Width 8+
+			# Ensures left/right are at least 2, leaving space for center
+			left_width = randi_range(2, int(total_width / 4))
+			right_width = left_width
+			var center_width = total_width - (left_width * 2) - 2 # 2 corridors
+			
 			draw_symmetrical_segment(sliding_origin, left_width, total_width, segment_length)
-	 
+			
 			new_rooms = [
-				[sliding_origin.x + left_width + 1, sliding_origin.z + 1, center_width, segment_length - 1],
 				[sliding_origin.x, sliding_origin.z + 1, left_width, segment_length - 1],
-				[sliding_origin.x + total_width - right_width, sliding_origin.z + 1, right_width, segment_length - 1],
+				[sliding_origin.x + left_width + 1, sliding_origin.z + 1, center_width, segment_length - 1],
+				[sliding_origin.x + total_width - right_width, sliding_origin.z + 1, right_width, segment_length - 1]
 			]
 		else:
-			# Asymmetrical split
-			var left_width = randi_range(2, int(total_width / 2) - 1)
-			var right_width = total_width - left_width - 1 # exclude corridor
-	 
-			if right_width == 1:
-				right_width = 2
-				left_width = max(2, left_width - 1)
-	 
+			# Asymmetrical logic based on your specific width constraints
+			if total_width <= 4:
+				# Constraint: Width 3-4 -> Only 1 corridor at the edge
+				# Either room is at the start (left_width = 0) or at the end (right_width = 0)
+				if randf() > 0.5:
+					left_width = 0
+					right_width = total_width - 1
+				else:
+					left_width = total_width - 1
+					right_width = 0
+					
+			elif total_width <= 8:
+				# Constraint: Width 5-8 -> Anywhere but must leave gap of 2 at edge OR be at edge (0)
+				var options = [0, total_width - 1] # The "at the edge" options
+				
+				# Check if there's space for a middle corridor (min 2 gap on both sides)
+				# L >= 2 and R >= 2 means: 2 <= left_width <= (total_width - 1 - 2)
+				for w in range(2, total_width - 2):
+					options.append(w)
+					
+				left_width = options[randi() % options.size()]
+				right_width = total_width - left_width - 1
+				
+			else:
+				# Constraint: Width 8+ -> Anything goes, min room width 2
+				# (Assuming if not at edge, rooms must be >= 2)
+				var options = [0, total_width - 1]
+				for w in range(2, total_width - 2):
+					options.append(w)
+					
+				left_width = options[randi() % options.size()]
+				right_width = total_width - left_width - 1
+
 			draw_asymmetrical_segment(sliding_origin, total_width, segment_length, left_width)
-	 
-			new_rooms = [
-				[sliding_origin.x, sliding_origin.z + 1, left_width, segment_length - 1],
-				[sliding_origin.x + left_width + 1, sliding_origin.z + 1, right_width, segment_length - 1],
-			]
-	 
+
+			# Add rooms only if they have a width > 0
+			if left_width > 0:
+				new_rooms.append([sliding_origin.x, sliding_origin.z + 1, left_width, segment_length - 1])
+			if right_width > 0:
+				new_rooms.append([sliding_origin.x + left_width + 1, sliding_origin.z + 1, right_width, segment_length - 1])
+
 		available_space_rooms += new_rooms
+	# ... rest of your code (marker placement and length increment)
 		current_length += segment_length
 		sliding_origin.z += segment_length
 		horizontal_divider_length_coords.append(sliding_origin.z)
@@ -235,26 +264,37 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 		external_capacity.append(space[3] if is_space_external(space) else 0)
 
 	# --- cluster adjacency ---
+	# --- cluster adjacency (Strict Pairs) ---
 	var unassigned = spawned_room_list.duplicate()
 	var clusters : Array = []
 
 	while unassigned.size() > 0:
+		# 1. Take the first available room
 		var root = unassigned.pop_back()
-		var cluster = [root]
-		var stack = [root]
+		var matched = false
 
-		while stack.size() > 0:
-			var cur = stack.pop_back()
+		# 2. Look through the REMAINING unassigned rooms for a partner
+		for j in range(unassigned.size() - 1, -1, -1):
+			var cand = unassigned[j]
 			
-			for j in range(unassigned.size() - 1, -1, -1):
-				var cand = unassigned[j]
-				if cur.info.adjacent_room_requirements.has(cand.info.room_name) \
-					or cand.info.adjacent_room_requirements.has(cur.info.room_name):
-					cluster.append(cand)
-					stack.append(cand)
-					unassigned.pop_at(j)
+			# Check if either specifically requires the other
+			var root_needs_cand = root.info.adjacent_room_requirements.has(cand.info.room_name)
+			var cand_needs_root = cand.info.adjacent_room_requirements.has(root.info.room_name)
 
-		clusters.append(cluster)
+			if root_needs_cand or cand_needs_root:
+				# 3. Found a match! Create the pair.
+				clusters.append([root, cand])
+				
+				# 4. Remove the partner from unassigned so it can't be used again
+				unassigned.pop_at(j)
+				
+				matched = true
+				break # CRITICAL: Stop searching. We only want a pair.
+
+		# 5. If no partner was found, add root as a single cluster
+		if not matched:
+			clusters.append([root])
+		
 
 	# --- order clusters: adjacency clusters first, then external singletons, then others ---
 	var ordered_groups : Array = []
@@ -289,10 +329,12 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 		var group_classes := {}
 		var any_secure = false
 		var current_space
+		var room_name
 
 		for r in group:
 			sum_min += r.info.min_size
 			sum_max += r.info.max_size
+			room_name = r.info.room_name
 			slots_needed += 1
 			if r.info.needs_external_access:
 				ext_multiplier += 1
@@ -300,7 +342,7 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 			if r.info.is_secure_room:
 				any_secure = true
 
-		var estimated_use = clamp((sum_min * 1.25 ) + 3, sum_min, sum_max)
+		var estimated_use = clamp(sum_min, sum_min, sum_max)
 		
 		var best_index = -1
 		var best_score = 1e9
@@ -309,18 +351,23 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 			current_space = available_space_rooms[i]
 			var area = space_left[i]
 			var slots = slots_left[i]
-			if area < 8 or slots == slots_needed:
+			if area < min(8, sum_min) or slots == slots_needed:
 				estimated_use = sum_min
 			var is_empty_space = rooms_assigned_to_spaces[i].is_empty()
 
 			# --- Hard feasibility checks ---
 			if area < estimated_use:
 				continue
+				if room_name == "EscapePod":
+					print("Failed to First Check - Estimated use and area: " + str(estimated_use) +" | "+ str(area))
 			if ext_multiplier > 0 and external_capacity[i] < ext_multiplier*3:
 				continue
+				if room_name == "EscapePod":
+					print("Failed to Second Check - :external cap and ext mult " + str(external_capacity) +" | "+ str(ext_multiplier))
 			if slots < slots_needed or slots < 1:
 				continue
-
+				if room_name == "EscapePod":
+					print("Failed to Third Check - slots and slots needed: " + str(slots) +" | "+ str(slots_needed))
 			# --- Scoring ---
 			var score := 0.0
 			var norm = max(sum_max, 1.0)
@@ -341,6 +388,8 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 					if total_current_max + sum_max < current_space[2] * current_space[3]:
 						score -= 0.7
 						break
+					if total_current_max > current_space[2] * current_space[3] * 3:
+						score += 0.4
 					
 			"""
 			# small penalty if same class already present
@@ -391,7 +440,7 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 
 
 		
-			
+
 	#if we get to here, all the rooms fit, and we might have spare space, so grab
 	for i in range(len(available_space_rooms)):
 		#this is a patch . we need to not have empty spaces, for the script below to work
@@ -399,11 +448,26 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 		if rooms_assigned_to_spaces[i] == []:
 			print("empty space - removed from division, as recursive room dividing algorithm assumes contents")
 			continue
+		
 		divide_space(available_space_rooms[i], rooms_assigned_to_spaces[i], origin.y)
 		
+		#for all this, we will need - list of rooms and thier locations, list of spaces, 
+		#lookup index for room merging, style+ prop + layoutsheet for room construction,
+		#rooms that can have subrooms + rooms that have space for it
+		#code that connects rooms with doors
+		#extra room builder/improved populate function that only runs here?
+		#self divide room portion sizes
+		#next on the list:--------------------------------
+		#set up door and inter-room connection system + merge certain rooms if they're small and compatible for more intersting layouts
+		#segment placed rooms if they're over max_size - only internally, tie to inter - room connection system
+		#build rooms internal inc engineering + bridge
+		#place fresher + locker in other rooms - ensure consistency with room connection tree
+		#place airlock at corridor ends - ban doors at airlock ends - probably do as room for door building and deco
+		#place fuel in empty spaces - get list of empty spaces, fill em up
+		#segment right sized rooms into portions - e.g escape pods in an escapepod room
+			
 # --- MAIN DIVIDE FUNCTION ---
-# --- MAIN DIVIDE FUNCTION ---
-func divide_space(space: Array, rooms: Array, floor_number: int) -> void:
+func divide_space(space: Array, rooms: Array, floor_number: float) -> void:
 	if rooms.is_empty():
 		return
 
@@ -417,15 +481,13 @@ func divide_space(space: Array, rooms: Array, floor_number: int) -> void:
 	var max_capacity = slots_x * slots_z
 	
 	if rooms.size() > max_capacity:
-		print(space)
-		print(rooms)
 		push_error("CRITICAL: Overcrowded. %d rooms in space for %d." % [rooms.size(), max_capacity])
 		return 
 
 	# --- 3. Base Case: Single Room ---
 	if rooms.size() == 1:
 		var r = rooms[0]
-		r.populate_room(Vector3(s_w, room_height, s_d), Vector3(s_x, floor_number * room_height, s_z))
+		r.populate_room(Vector3(s_w, room_height, s_d), Vector3(s_x, floor_number, s_z))
 		return
 
 	# --- 4. Grouping Strategy (Adjacency Pairing) ---
@@ -467,10 +529,7 @@ func divide_space(space: Array, rooms: Array, floor_number: int) -> void:
 		for r in item_rooms:
 			if r.info.needs_external_access: ext_needs_count += 1
 	
-	# OVERRIDE: If multiple external needs exist, try to pick the axis that gives BOTH children wall access.
-	# Axis 1 (Horizontal Split) keeps Left/Right wall access for both Top and Bottom children.
-	# CRITICAL FIX: Only force this override if the depth is actually large enough to be split (>= 4).
-	# Otherwise, we create a tiny room that causes overflow.
+	
 	if ext_needs_count > 1 and (touches_left or touches_right):
 		if s_d >= 4: 
 			axis = 1
@@ -511,7 +570,6 @@ func divide_space(space: Array, rooms: Array, floor_number: int) -> void:
 		var r0 = pair[0]
 		var r1 = pair[1]
 		
-		# 3. FIX ADJACENCY ORIENTATION
 		# Check if one room needs ext access and is about to be put in a group without it
 		var r0_needs = r0.info.needs_external_access
 		var r1_needs = r1.info.needs_external_access
@@ -643,8 +701,8 @@ func flatten_group(group_arr: Array) -> Array:
 func find_valid_partition(pool: Array, s_w: int, s_d: int, axis: int, valid_groups_for_ext: Array) -> Array:
 	var forced_0 = []
 	var forced_1 = []
-	var flex_ext = []
-	var flex_int = []
+	var flex_ext = [] # Flexible items that NEED external
+	var flex_int = [] # Flexible items that DO NOT need external
 
 	# 1. Categorize Rooms
 	for item in pool:
@@ -666,37 +724,35 @@ func find_valid_partition(pool: Array, s_w: int, s_d: int, axis: int, valid_grou
 		else:
 			flex_int.append(item)
 
-	# 2. Build Candidate Permutations (The Fix)
-	# We create different sort orders to ensure we find size-combinations (like Pair+Single)
-	var all_flexible = []
-	all_flexible.append_array(flex_ext)
-	all_flexible.append_array(flex_int)
-	
+	# 2. Candidate Generation (Refined Sorting)
 	var candidate_lists = []
 	
-	# A. Balanced Sort (Alternating Ext/Int - Good for wall crowding)
-	var list_balanced = []
-	var g0_ext = []; var g1_ext = []
-	for x in range(flex_ext.size()):
-		if x % 2 == 0: g0_ext.append(flex_ext[x])
-		else: g1_ext.append(flex_ext[x])
-	list_balanced.append_array(g0_ext)
-	list_balanced.append_array(flex_int) # Append internals after
-	list_balanced.append_array(g1_ext)   # Sandwich method
-	candidate_lists.append(list_balanced)
+	# Sort A: "Resource Efficient" (Prioritize putting Internal items together)
+	# We put flex_ext at the ends (likely to hit walls) and flex_int in the middle.
+	var list_res = []
+	list_res.append_array(flex_ext) 
+	list_res.append_array(flex_int) # Try to group internal items together
+	candidate_lists.append(list_res)
 	
-	# B. Size Ascending (Singles first - Good for fitting small remainders)
-	var list_asc = all_flexible.duplicate()
+	# Sort B: Size Ascending (Singles -> Pairs)
+	var list_asc = flex_ext + flex_int
 	list_asc.sort_custom(func(a, b): return get_room_count([a]) < get_room_count([b]))
 	candidate_lists.append(list_asc)
 
-	# C. Size Descending (Pairs first - Good for main chunks)
-	var list_desc = all_flexible.duplicate()
+	# Sort C: Size Descending (Pairs -> Singles)
+	var list_desc = flex_ext + flex_int
 	list_desc.sort_custom(func(a, b): return get_room_count([a]) > get_room_count([b]))
 	candidate_lists.append(list_desc)
+	
+	# Sort D: "Protective" (Push Internal Pairs to the absolute back to save ext slots)
+	# Useful if flex_int contains big pairs clogging up the front of the list
+	var list_prot = []
+	list_prot.append_array(flex_ext)
+	list_prot.append_array(flex_int) # Same as A, but explicitly separate logic if needed later
+	candidate_lists.append(list_prot)
 
 	# 3. Middle-Out Search
-	var total_flex = all_flexible.size()
+	var total_flex = flex_ext.size() + flex_int.size()
 	var search_indices = []
 	var mid = int(total_flex / 2)
 	search_indices.append(mid)
@@ -704,38 +760,83 @@ func find_valid_partition(pool: Array, s_w: int, s_d: int, axis: int, valid_grou
 		if mid - i >= 0: search_indices.append(mid - i)
 		if mid + i <= total_flex: search_indices.append(mid + i)
 
-	# Try every split index on every list type
 	for i in search_indices:
 		for candidate_list in candidate_lists:
 			
 			var g0 = forced_0.duplicate()
 			var g1 = forced_1.duplicate()
 			
-			# Slice from the current candidate list
-			if i > 0:
-				g0.append_array(candidate_list.slice(0, i))
-			if i < total_flex:
-				g1.append_array(candidate_list.slice(i, total_flex))
-				
+			if i > 0: g0.append_array(candidate_list.slice(0, i))
+			if i < total_flex: g1.append_array(candidate_list.slice(i, total_flex))
+			
 			if g0.is_empty() or g1.is_empty(): continue
 
-			# --- VALIDATION ---
-			# 1. Area Check
+			# --- CHECK 1: PHYSICAL AREA FIT ---
 			if not can_split(s_w, s_d, axis, get_room_count(g0), get_room_count(g1)):
 				continue
 
-			# 2. Wall Perimeter Check (From previous fix)
-			if axis == 1:
-				var ext_c0 = count_external_in_group(g0)
-				var ext_c1 = count_external_in_group(g1)
-				var total_wall_needed = (ext_c0 * 2) + (ext_c1 * 2)
-				if total_wall_needed > s_d:
-					continue
+			if not check_future_external_viability(g0, g1, s_w, s_d, axis, valid_groups_for_ext):
+				continue
 			
-			# Found a valid configuration!
 			return [g0, g1]
 
 	return []
+	
+func check_future_external_viability(g0: Array, g1: Array, parent_w: int, parent_d: int, axis: int, parent_valid_ext: Array) -> bool:
+	# 1. Count Needs
+	var needed_0 = count_external_in_group(g0)
+	var needed_1 = count_external_in_group(g1)
+	
+	# If nobody needs anything, we are fine.
+	if needed_0 == 0 and needed_1 == 0: return true
+
+	# 2. Determine Available Wall Length for Children
+	var cap_0 = 0
+	var cap_1 = 0
+	
+	# Calculate child dimensions roughly (we assume the split is somewhat proportional)
+	var n0 = get_room_count(g0)
+	var n1 = get_room_count(g1)
+	var total_n = n0 + n1
+	var ratio_0 = float(n0) / float(total_n)
+	
+	if axis == 0: # Vertical Split (Left | Right)
+		# Dimensions: Child 0 is (W0 x D), Child 1 is (W1 x D)
+		# Wall Access:
+		# If parent touched Left (Side 0), Child 0 keeps full Depth access.
+		# If parent touched Right (Side 1), Child 1 keeps full Depth access.
+		
+		var d_len = parent_d
+		
+		if parent_valid_ext.has(0): cap_0 += d_len # G0 inherits Left Wall
+		if parent_valid_ext.has(1): cap_1 += d_len # G1 inherits Right Wall
+		
+	else: # Horizontal Split (Top / Bottom)
+		# Dimensions: Child 0 is (W x D0), Child 1 is (W x D1)
+		# Wall Access: They SHARE the side walls.
+		
+		var w_len = parent_w
+		var d_0 = int(parent_d * ratio_0)
+		var d_1 = parent_d - d_0
+		
+		# If parent touches Left (0), BOTH children get a piece of it
+		if parent_valid_ext.has(0):
+			cap_0 += d_0
+			cap_1 += d_1
+			
+		# If parent touches Right (1), BOTH children get a piece of it
+		if parent_valid_ext.has(1):
+			cap_0 += d_0
+			cap_1 += d_1
+
+	# 3. The Comparison (with Buffer)
+	# We require 2 units of wall per external room.
+	# We calculate strict capacity.
+	
+	if (needed_0 * 2) > cap_0: return false
+	if (needed_1 * 2) > cap_1: return false
+	
+	return true
 
 # --- Helper ---
 func count_external_in_group(grp: Array) -> int:
@@ -828,138 +929,26 @@ func group_rooms_by_adjacency(rooms: Array, room_counts: Dictionary) -> Array:
 
 	return groups
 
-const SAFETY_BUFFER := 1.15  # multiply group_size by this when checking capacity (configurable)
-const BALANCE_WEIGHT := 1.2
-const NEAR_FULL_WEIGHT := 2.0
-const OVERLAP_WEIGHT := 0.8
-
 func _estimate_room_size(room) -> float:
 	# Prefer midpoint between min and max if available, else fallback
 	return clamp(min(room.min_size*3, room.max_size/2), room.min_size, room.max_size) 
 
-
-func assign_group_to_floor(group: Array,count_map: Dictionary,floors: Array,floor_classes: Array,floor_loads: Array,floor_areas: Array) -> void:
-	# Build group_size and unique class set
-	var group_size := 0.0
-	var class_set := {}
-	for room in group:
-		var count = int(count_map.get(room.room_name, 0))
-		if count <= 0:
-			continue
-		var avg_size = _estimate_room_size(room)
-		group_size += avg_size * count
-		# collect classes into a set to avoid duplicates
-		if typeof(room.room_class) == TYPE_ARRAY:
-			for cls in room.room_class:
-				class_set[cls] = true
-
-	# No rooms to place in this group?
-	if group_size <= 0.0:
-		return
-
-	# Precompute average load (current)
-	var total_load := 0.0
-	for load in floor_loads:
-		total_load += float(load)
-	var avg_load = total_load / max(1, float(floor_loads.size()))
-
-	# Try to find best floor via cost scoring
-	var best_floor := -1
-	var min_cost := INF
-	var group_classes = class_set.keys()
-
-	for i in range(floors.size()):
-		var capacity = float(floor_areas[i])
-		var load = float(floor_loads[i])
-		var projected_load = load + group_size
-
-		# Capacity check with a safety buffer to avoid very tight fits
-		if projected_load * SAFETY_BUFFER > capacity:
-			continue
-
-		var load_ratio = projected_load / max(1.0, capacity)
-		var cost := 0.0
-
-		# Balance penalty: deviation from avg load normalized by capacity
-		var balance_penalty = abs(projected_load - avg_load) / max(1.0, capacity)
-		cost += balance_penalty * BALANCE_WEIGHT
-
-		# Strong non-linear penalty for nearing full
-		cost += pow(load_ratio, 1.5) * NEAR_FULL_WEIGHT
-
-		# Class overlap penalty (graded)
-		var overlap_count := 0
-		for cls in group_classes:
-			if floor_classes[i].has(cls):
-				overlap_count += 1
-		var overlap_ratio = float(overlap_count) / float(max(1, group_classes.size()))
-		cost += overlap_ratio * OVERLAP_WEIGHT
-		if overlap_ratio > 0.4:
-			cost += 0.4  # extra penalty if more than half overlap
-
-		# Slight bonus for adding new class diversity
-		if overlap_ratio == 0.0:
-			cost -= 0.3
-
-		# Tiny noise to break ties
-		cost += randf() * 0.4
-
-		# Slight preference to emptier floors (less rooms currently)
-		if floors[i].size() <= 1:
-			cost -= 0.1
-
-		if cost < min_cost:
-			min_cost = cost
-			best_floor = i
-
-	# If no floor passed the safety capacity check, pick the floor with the most spare (or least negative overflow)
-	if best_floor == -1:
-		var best_spare := -INF
-		for i in range(floors.size()):
-			var capacity = float(floor_areas[i])
-			var load = float(floor_loads[i])
-			var spare = capacity - (load + group_size)  # could be negative
-			# prefer largest spare (closest to 0 or most positive)
-			if spare > best_spare:
-				best_spare = spare
-				best_floor = i
-		# Note: if best_spare < 0, this will overflow that floor — better than forcing floor 0 blindly
-
-	# If still -1 (shouldn't happen unless no floors), bail
-	if best_floor < 0:
-		push_error("assign_group_to_floor: no floor available to assign group — skipping")
-		return
-
-	# Assign (increment) rooms into selected floor
-	for room in group:
-		var count = int(count_map.get(room.room_name, 0))
-		if count <= 0:
-			continue
-		# increment existing count if present
-		var prev = int(floors[best_floor].get(room.room_name, 0))
-		floors[best_floor][room.room_name] = prev + count
-
-		var avg_size = _estimate_room_size(room)
-		floor_loads[best_floor] += avg_size * count
-
-		# add classes to floor class set (dictionary used as set)
-		if typeof(room.room_class) == TYPE_ARRAY:
-			for cls in room.room_class:
-				floor_classes[best_floor][cls] = true
-
+# Constants for balancing
+const SAFETY_BUFFER = 1.1 
+const BALANCE_WEIGHT = 1.5
+const NEAR_FULL_WEIGHT = 2.0
+const OVERLAP_WEIGHT = 0.8
+const EXTERNAL_WEIGHT = 5.0 # High priority: don't put external rooms where they don't fit
 
 func room_quantities(ship_x_size: int, ship_z_size: int, selected_ship, floor_count: int, floor_areas: Array) -> Array:
-	# Estimate population — be careful if selected_ship.population_density is per-floor.
-	# This implementation assumes population_density is area-per-person (per floor),
-	# so multiply by floor_count only if your density is per-floor total. Adjust as needed
-	var current_fullness = 0
-	var maximum = (max_length*max_width*floor_count)-(max_length+max_width)
-	print("maximum: " + str(maximum))
-	var ship_population = ceil(float(ship_x_size * ship_z_size) / float(max(1, selected_ship.population_density)))
-	ship_population = int(ship_population)  # baseline population across ship area
-	# If you intended population per floor, multiply by floor_count here. I will assume baseline (not multiplied).
-	print("ship population (baseline): " + str(ship_population))
-	# --- Step 1: compute base counts for all rooms (first pass) ---
+	var maximum_area = 0
+	for a in floor_areas: maximum_area += a
+	
+	# 1. Calculate Population
+	var ship_area = ship_x_size * ship_z_size * floor_count
+	var ship_population = ceili(float(ship_area) / max(1, selected_ship.population_density) / 2.0)
+	
+	# 2. Compute Base Room Counts (Global)
 	var room_counts := {}
 	for room in Global.all_rooms:
 		var count := 0
@@ -967,88 +956,149 @@ func room_quantities(ship_x_size: int, ship_z_size: int, selected_ship, floor_co
 			count = 0
 		elif room.room_name in selected_ship.required_rooms or Global.is_list_in_list(room.room_class, selected_ship.required_room_classes):
 			count = max(1, int(ship_population / max(1, room.population_threshold)))
-		elif Global.is_list_in_list(room.room_class, selected_ship.optional_room_classes) and current_fullness <= maximum:
-			# optional rooms appear probabilistically
+		elif Global.is_list_in_list(room.room_class, selected_ship.optional_room_classes):
 			if randf() > 0.5:
 				count = int(round(float(ship_population) / max(1.0, float(room.population_threshold))))
 		room_counts[room.room_name] = max(0, count)
-		#if room.room_name not in ["Engineering", "Bridge"]:
-		current_fullness += count * 4
-	while current_fullness * 2 < maximum:
-		for room in Global.all_rooms:
-			if current_fullness * 1.5 < maximum:
-				if room.population_threshold < 30:
-					var amount = ceil(room_counts[room.room_name] * 0.2) 
-					room_counts[room.room_name] += amount
-					current_fullness += amount * 5
-					
-			else:
-				break
-
-	print("current fullness: " + str(current_fullness))
-	# --- Step 1.5: second pass to enforce adjacency and mutual requirements ---
-	# Ensure that if room A requires N of room B nearby, there are at least N of B.
-	# We'll do repeated passes until no change or a small number of iterations.
-	var changed = true
-	var iter = 0
-	while changed and iter < 5:
-		changed = false
-		iter += 1
-		for room in Global.all_rooms:
-			var base_count = room_counts[room.room_name]
-			if base_count <= 0:
-				continue
-			# for each adjacent requirement, ensure it's present in sufficient numbers
-			if room.adjacent_room_requirements.size() >= 1:
-				for adjacent in room.adjacent_room_requirements:
-					var adj_count = room_counts[adjacent]
-					# we want at least base_count of adjacent rooms (or some rule); use base_count as target
-					if adj_count < base_count: 
-						room_counts[adjacent] = base_count
-						changed = true
-	# (end adjacency enforcement)
 	
-	# --- Step 2: Prepare floor structures ---
+	# 3. Enforce Master/Slave counts globally before splitting
+	_enforce_adjacency_ratios(room_counts)
+
+	# 4. Create Placement Units (Bundles of Master + Slaves)
+	var placement_units = _generate_placement_units(room_counts)
+
+	# 5. Prepare Floor Tracking
 	var floors := []
 	var floor_classes := []
 	var floor_loads := []
+	var floor_external_usage := []
+	var max_external_per_floor = ship_x_size * 2 # Based on your "ship length * 2" rule
+
 	for i in range(floor_count):
 		floors.append({})
 		floor_classes.append({})
 		floor_loads.append(0.0)
+		floor_external_usage.append(0)
 
-	# --- Step 3: Group rooms by adjacency, then assign groups ---
-	var active_rooms := []
-	for room in Global.all_rooms:
-		if int(room_counts.get(room.room_name, 0)) > 0:
-			active_rooms.append(room)
+	# 6. Distribute Units
+	# Sort units by size descending to handle "big rocks" first
+	placement_units.sort_custom(func(a, b): return b.total_area < a.total_area)
 
-	# group_rooms_by_adjacency expected to return Array of Arrays (groups)
-	var groups = group_rooms_by_adjacency(active_rooms, room_counts)
-
-	# Estimate each group's size and sort groups by descending size (place big groups first)
-	var sortable := []
-	for group in groups:
-		var gsize := 0.0
-		for room in group:
-			var count = int(room_counts.get(room.room_name, 0))
-			if count <= 0:
-				continue
-			gsize += _estimate_room_size(room) * count
-		sortable.append({"group": group, "size": gsize})
-	# sort desc
-	sortable.sort_custom(func(a, b):
-		return int(sign(b["size"]- a["size"]))  # return >0 if a should come after b
-	)
-
-	# assign in sorted order
-	for entry in sortable:
-		var group = entry["group"]
-		assign_group_to_floor(group, room_counts, floors, floor_classes, floor_loads, floor_areas)
-
-	print("Final floor allocations:")
+	for unit in placement_units:
+		var best_floor = _find_best_floor(unit, floors, floor_loads, floor_areas, floor_classes, floor_external_usage, max_external_per_floor)
+		if best_floor != -1:
+			_assign_unit_to_floor(unit, best_floor, floors, floor_loads, floor_classes, floor_external_usage)
+		else:
+			push_warning("Could not fit unit: " + str(unit.main_room))
 	print(floors)
 	return floors
+
+# --- Helper Logic ---
+
+func _enforce_adjacency_ratios(counts: Dictionary):
+	var changed = true
+	while changed:
+		changed = false
+		for room in Global.all_rooms:
+			if counts.get(room.room_name, 0) <= 0: continue
+			
+			for master_name in room.adjacent_room_requirements:
+				if counts.get(master_name, 0) < counts[room.room_name]:
+					counts[master_name] = counts[room.room_name]
+					changed = true
+
+func _generate_placement_units(counts: Dictionary) -> Array:
+	var units = []
+	var remaining = counts.duplicate()
+	
+	# First, bundle Slaves with Masters
+	for room in Global.all_rooms:
+		var r_name = room.room_name
+		if room.adjacent_room_requirements.size() > 0:
+			var master_name = room.adjacent_room_requirements[0] # Primary master
+			var master_count = remaining.get(master_name, 0)
+			var slave_count = remaining.get(r_name, 0)
+			
+			if master_count > 0 and slave_count > 0:
+				# How many slaves per master?
+				var ratio = ceili(float(slave_count) / float(master_count))
+				for i in range(master_count):
+					var unit = {"rooms": {}, "total_area": 0.0, "classes": [], "external_count": 0, "main_room": master_name}
+					# Add 1 Master
+					_add_to_unit(unit, master_name, 1)
+					# Add ratio of slaves if available
+					var to_add = min(ratio, remaining[r_name])
+					_add_to_unit(unit, r_name, to_add)
+					remaining[r_name] -= to_add
+					units.append(unit)
+				remaining[master_name] = 0
+
+	# Then, bundle remaining standalone rooms
+	for r_name in remaining.keys():
+		while remaining[r_name] > 0:
+			var unit = {"rooms": {}, "total_area": 0.0, "classes": [], "external_count": 0, "main_room": r_name}
+			_add_to_unit(unit, r_name, 1)
+			remaining[r_name] -= 1
+			units.append(unit)
+	return units
+
+func _add_to_unit(unit: Dictionary, r_name: String, amt: int):
+	var room_data = _get_room_by_name(r_name)
+	unit.rooms[r_name] = unit.rooms.get(r_name, 0) + amt
+	var size = _estimate_room_size(room_data) * amt
+	if room_data.room_name in ["Engineering", "Airlock", "Fuel", "Bridge", "Locker", "Fresher"]:
+		size = 0
+	unit.total_area += size
+	if typeof(room_data.room_class) == TYPE_ARRAY:
+		for c in room_data.room_class: 
+			if not unit.classes.has(c): unit.classes.append(c)
+	if room_data.needs_external_access: # Assuming flag exists
+		unit.external_count += amt
+
+func _find_best_floor(unit, floors, floor_loads, floor_areas, floor_classes, floor_ext, max_ext) -> int:
+	var best_f = -1
+	var min_cost = INF
+	
+	for i in range(floors.size()):
+		var capacity = float(floor_areas[i])
+		var proj_load = floor_loads[i] + unit.total_area
+		
+		# Hard Constraints
+		if proj_load * SAFETY_BUFFER > capacity: continue
+		if unit.external_count > 0 and (floor_ext[i] + unit.external_count) > max_ext: continue
+		
+		# Cost Calculation
+		var cost = (proj_load / capacity) * BALANCE_WEIGHT
+		
+		# Class Diversity: Penalty if floor already has many of these classes
+		var overlap = 0
+		for c in unit.classes:
+			if floor_classes[i].has(c): overlap += 1
+		cost += (float(overlap) / max(1, unit.classes.size())) * OVERLAP_WEIGHT
+		
+		# Tie-breaker / Randomization for variety
+		cost += randf() * 0.2
+		
+		if cost < min_cost:
+			min_cost = cost
+			best_f = i
+			
+	return best_f
+
+func _assign_unit_to_floor(unit, f_idx, floors, floor_loads, floor_classes, floor_ext):
+	for r_name in unit.rooms:
+		floors[f_idx][r_name] = floors[f_idx].get(r_name, 0) + unit.rooms[r_name]
+	floor_loads[f_idx] += unit.total_area
+	floor_ext[f_idx] += unit.external_count
+	for c in unit.classes:
+		floor_classes[f_idx][c] = true
+
+# Mock helpers - replace with your actual Global calls
+func _get_room_by_name(n: String):
+	for r in Global.all_rooms:
+		if r.room_name == n: return r
+	return null
+
 	
 
 func area_to_width_and_length(min_area, max_area, ratio_limit = [3,1]) -> Array:
@@ -1063,12 +1113,12 @@ func custom_room_sort(a, b):
 	return a.info.max_size > b.info.max_size;
 	
 func custom_room_array_sort(a, b):
-	var asize = a[0].info.max_size
-	var bsize = b[0].info.max_size
+	var asize = clamp(min(a[0].info.min_size*3, a[0].info.max_size/2), a[0].info.min_size, a[0].info.max_size) 
+	var bsize = clamp(min(b[0].info.min_size*3, b[0].info.max_size/2), b[0].info.min_size, b[0].info.max_size) 
 	if a.size() > 1:
-		asize+= a[1].info.max_size
+		asize+= clamp(min(a[1].info.min_size*3, a[1].info.max_size/2), a[1].info.min_size, a[1].info.max_size) 
 	if b.size() > 1:
-		bsize+= b[1].info.max_size
+		bsize+= clamp(min(b[1].info.min_size*3, b[1].info.max_size/2), b[1].info.min_size, b[1].info.max_size) 
 	return asize > bsize;
 	
 func custom_box_sort(a, b):
