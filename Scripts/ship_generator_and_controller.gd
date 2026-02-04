@@ -44,7 +44,7 @@ func build_ship(x_size, z_size, ship_type):
 	var floor_sizes: Array = []
 	var floor_areas_for_room_so_i_can_skip_the_computation: Array = []
 	var area = x_size * z_size
-	var base_floor_count = round(clamp(area / 125.0, 1, 4))
+	var base_floor_count = round(clamp(area / 125.0, 1, 3))
 	var floor_count = base_floor_count if x_size >= 5 else max(1, base_floor_count - 1)
 	print("floors " + str(floor_count))
 	for floor in range(floor_count):
@@ -433,8 +433,7 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 
 	print("Rooms assigned to spaces: ", rooms_assigned_to_spaces)
 	print("Remaining space: ", space_left)
-	print("--------------spaces for floor complete--------------")
-	print("\n")
+
 	print("--------------next floor--------------")
 	#endregion
 
@@ -451,12 +450,22 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 		
 		divide_space(available_space_rooms[i], rooms_assigned_to_spaces[i], origin.y)
 		
-		#for all this, we will need - list of rooms and thier locations, list of spaces, 
-		#lookup index for room merging, style+ prop + layoutsheet for room construction,
-		#rooms that can have subrooms + rooms that have space for it
-		#code that connects rooms with doors
-		#extra room builder/improved populate function that only runs here?
-		#self divide room portion sizes
+	#for all this, we will need - list of rooms and thier locations,
+	rooms_assigned_to_spaces #get pos values
+	#list of spaces
+	available_space_rooms
+	#lookup index for room merging, 
+	pass #global
+	#style+ prop + layoutsheet for room construction,
+	pass #global
+	#rooms that can have subrooms + rooms that have space for it
+	pass #to be written combo subroom min size with rooms assigned to spaces size variable
+	#code that connects rooms with doors
+	pass #to be written - likely to just be adjacency check + lookup index
+	#extra room builder/improved populate function that only runs here?
+	pass #to be written check empty spaces, fill em up with Sci Fi Stuff
+	#self divide room portion sizes 
+	pass # to be written #should just be 2x2 in most cases, but we've needed to rework the room variables for a while anyway lol
 		#next on the list:--------------------------------
 		#set up door and inter-room connection system + merge certain rooms if they're small and compatible for more intersting layouts
 		#segment placed rooms if they're over max_size - only internally, tie to inter - room connection system

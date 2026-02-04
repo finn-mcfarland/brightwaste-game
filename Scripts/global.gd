@@ -98,7 +98,7 @@ class RoomInfo:
 	#building it
 	var min_size;
 	var max_size;
-	var orientation; # Orientation and positioning value # now vestigial
+	var placement_data; # Orientation and positioning value # now vestigial
 	var room_class; # Room classification or vibe
 	var population_threshold; # Population threshold for requiring additional rooms
 	#placement
@@ -128,7 +128,7 @@ class RoomInfo:
 		self.allowable_props = allowable_props
 		self.adjacent_room_requirements = adjacent_room_requirements
 		self.allowable_sub_rooms = allowable_sub_rooms
-		self.orientation = orientation
+		self.placement_data = placement_data
 		self.room_class = room_class
 		self.population_threshold = population_threshold
 		
@@ -168,8 +168,8 @@ var all_rooms = [
 	RoomInfo.new("GreenHouse", 6, 72, true, false, true, false, false, false, false, [], [], [], "", ["Production"], 10),
 	RoomInfo.new("GunneryControl", 4, 12, false, false, true, true, true, false, false, [], [], [], "", ["Combat"], 30),
 	RoomInfo.new("BayGunnery", 2, 32, false, true, true, false, false, false, false, [], ["GunneryControl"], [], "", ["Combat"], 30), #not to mention we need a way to define what props could go in each room
-	RoomInfo.new("Laboratory", 8, 32, true, false, true, false, false, false, false, [], [], [], "", ["Production"], 10),
-	RoomInfo.new("TrashCompactor", 4, 24, false, true, true, false, false, false, false, [], [], [], "", ["Utility"], 25),
+	RoomInfo.new("Laboratory", 8, 32, true, false, true, false, true, false, false, [], [], [], "", ["Production"], 10),
+	RoomInfo.new("TrashCompactor", 4, 24, false, true, true, false, true, false, false, [], [], [], "", ["Utility"], 25),
 	RoomInfo.new("Lounge", 4, 32, false, false, false, false, false, false, false, [], [], [], "", ["Personnel"], 10), #this should not be the subroom for the prison
 	RoomInfo.new("Fresher", 1, 12, false, false, true, true, false, false, false, [], [], [], "", ["Personnel"], 5),
 	RoomInfo.new("Locker", 1, 2, false, false, true, true, false, false, false, [], [], [], "", ["Personnel"], 1),
@@ -186,12 +186,17 @@ var all_rooms = [
 ]
 # Ship setups with required rooms and banned rooms for different classes
 
+var connectionmap = {
+	"SleepingQuarters":["Office","Laboratory","RepairBay"]
+}
+
+
 #required classes, and optional classes.
 #higher density is lower, it's how many tiles are required for a ship to have +1 person
 var ship_setups = [
-	ShipInfo.new("Transporter", 83, 378, 25, [2, 3],  ["SmallStorage", "Bridge", "Airlock"], ["", ""], ["Personnel", "Propulsion", "Transportation"], ["", "", ""]),
-	ShipInfo.new("Production", 80, 200, 25, [1, 2.5], ["Factory", "Airlock", "Bridge", "Lounge"], ["BayGunnery", ""], ["Repair", "Utility", ""], ["Production", "Personnel", "Propulsion"]),
-	ShipInfo.new("Combat", 75, 500, 25, [1, 4], ["Bridge", "Airlock", ""], ["EscapePod", "Lounge", ""], ["Combat", "Propulsion", "Personnel"], ["Secure", "Utility", "Transportation"]),
-	ShipInfo.new("Research", 100, 300, 25, [1, 2], ["Laboratory", "Medical", "Airlock", "Bridge"], ["", "", ""], ["Personnel", "", ""], ["Secure", "Propulsion", "Utility", "Administration"]),
-	ShipInfo.new("Auxiliary", 3, 20, 6, [1, 3], ["Bridge", "Airlock", ""], ["Personnel", "", ""], ["", "Propulsion", ""], ["Utility"])
+	ShipInfo.new("Transporter", 83, 378, 19, [1, 2],  ["SmallStorage", "Bridge", "Airlock"], ["", ""], ["Personnel", "Propulsion", "Transportation"], ["", "", ""]),
+	ShipInfo.new("Production", 80, 200, 9, [1, 2.5], ["Factory", "Airlock", "Bridge", "Lounge"], ["BayGunnery", ""], ["Repair", "Utility", ""], ["Production", "Personnel", "Propulsion"]),
+	ShipInfo.new("Combat", 75, 500, 13, [1, 3], ["Bridge", "Airlock", ""], ["EscapePod", "Lounge", ""], ["Combat", "Propulsion", "Personnel"], ["Secure", "Utility", "Transportation"]),
+	ShipInfo.new("Research", 100, 300, 23, [1, 2], ["Laboratory", "Medical", "Airlock", "Bridge"], ["", "", ""], ["Personnel", "", ""], ["Secure", "Propulsion", "Utility", "Administration"]),
+	ShipInfo.new("Auxiliary", 3, 20, 3, [1, 3], ["Bridge", "Airlock", ""], ["Personnel", "", ""], ["", "Propulsion", ""], ["Utility"])
 ]
