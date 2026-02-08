@@ -189,7 +189,7 @@ script = ExtResource("5_kry3j")
 [node name="Corridor" type="GridMap" parent="ShipBase"]
 mesh_library = ExtResource("7_ynf5e")
 cell_size = Vector3(1, 1.5, 1)
-cell_center_y = false
+metadata/_editor_floor_ = Vector3(0, 0, 0)
 
 [node name="Marker3D" type="Marker3D" parent="ShipBase"]
 
