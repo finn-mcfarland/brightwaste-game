@@ -98,21 +98,19 @@ class RoomInfo:
 	#building it
 	var min_size;
 	var max_size;
+	var can_be_complex_room; # Can be a larger room, containing subrooms
+	var needs_external_access; # Needs to be on the ship wall
+	var needs_wall; # For when we want open spaces with tables in them
+	var can_be_sub_room; # Can be a part of a larger room
+	var is_secure_room; # Indicates if the room is a secure room # could be building if this changes placement
+	var no_door; # Indicates if the room has no door
+	var has_divider; # Indicates if the room can have a divider
+	var allowable_sub_rooms; # List of allowable subrooms
+	var adjacent_room_requirements; # List of rooms that need to be adjacent
+	var allowable_props; # List of allowable props in the room
 	var placement_data; # Orientation and positioning value # now vestigial
 	var room_class; # Room classification or vibe
 	var population_threshold; # Population threshold for requiring additional rooms
-	#placement
-	var adjacent_room_requirements; # List of rooms that need to be adjacent
-	var can_be_sub_room; # Can be a part of a larger room
-	var can_be_complex_room; # Can be a larger room, containing subrooms
-	var needs_external_access; # Needs to be on the ship wall
-	var allowable_sub_rooms; # List of allowable subrooms
-	#cosmetic rules
-	var is_secure_room; # Indicates if the room is a secure room # could be building if this changes placement
-	var has_divider; # Indicates if the room can have a divider
-	var no_door; # Indicates if the room has no door
-	var allowable_props; # List of allowable props in the room
-	var needs_wall; # For when we want open spaces with tables in them
 
 	func _init(room_name, min_size, max_size, can_be_complex_room, needs_external_access, needs_wall, can_be_sub_room, is_secure_room, no_door, has_divider, allowable_props, adjacent_room_requirements, allowable_sub_rooms, orientation, room_class, population_threshold):
 		self.room_name = room_name
@@ -158,8 +156,8 @@ class ShipInfo:
 var all_rooms = [
 	RoomInfo.new("Empty", 1, 20, false, false, false, false, false, false, false, [], [], [], "", ["Meta"], -1),
 	RoomInfo.new("SleepingQuarters", 4, 24, true, false, true, false, false, false, false, [], [], [], "", ["Personnel"], 2),
-	RoomInfo.new("MessHall", 4, 48, true, false, false, false, false, false, true, [], [], [], "", ["Personnel"], 30),
-	RoomInfo.new("Kitchen", 4, 48, true, false, true, false, false, false, true, [], ["MessHall"], [], "", ["Personnel"], 30),
+	RoomInfo.new("MessHall", 4, 48, false, false, false, false, false, false, true, [], [], [], "", ["Personnel"], 30),
+	RoomInfo.new("Kitchen", 4, 48, false, false, true, false, false, false, true, [], ["MessHall"], [], "", ["Personnel"], 30),
 	RoomInfo.new("Cargo", 12, 304, false, true, true, false, true, false, false, [], [], [], "", ["Transportation"], 30), #in a manner of speaking this does need external access, also consider a secure room variable - bulkhead shit
 	RoomInfo.new("SmallStorage", 2, 12, false, false, true, true, false, false, false, [], [], [], "", ["Utility"], 4),
 	RoomInfo.new("Hangar", 15, 1300, false, true, true, false, false, false, false, [], [], [], "", ["Transportation"], 80),
@@ -167,10 +165,10 @@ var all_rooms = [
 	RoomInfo.new("Airlock", 1, 16, false, true, true, false, true, false, false, [], [], [], "", ["Access"], 10),
 	RoomInfo.new("GreenHouse", 6, 72, true, false, true, false, false, false, false, [], [], [], "", ["Production"], 10),
 	RoomInfo.new("GunneryControl", 4, 12, false, false, true, true, true, false, false, [], [], [], "", ["Combat"], 30),
-	RoomInfo.new("BayGunnery", 2, 32, false, true, true, false, false, false, false, [], ["GunneryControl"], [], "", ["Combat"], 30), #not to mention we need a way to define what props could go in each room
+	RoomInfo.new("BayGunnery", 2, 32, false, true, true, false, true, true, false, [], ["GunneryControl"], [], "", ["Combat"], 30), #not to mention we need a way to define what props could go in each room
 	RoomInfo.new("Laboratory", 8, 32, true, false, true, false, true, false, false, [], [], [], "", ["Production"], 10),
 	RoomInfo.new("TrashCompactor", 4, 24, false, true, true, false, true, false, false, [], [], [], "", ["Utility"], 25),
-	RoomInfo.new("Lounge", 4, 32, false, false, false, false, false, false, false, [], [], [], "", ["Personnel"], 10), #this should not be the subroom for the prison
+	RoomInfo.new("Lounge", 4, 32, true, false, false, false, false, false, false, [], [], [], "", ["Personnel"], 10), #this should not be the subroom for the prison
 	RoomInfo.new("Fresher", 1, 12, false, false, true, true, false, false, false, [], [], [], "", ["Personnel"], 5),
 	RoomInfo.new("Locker", 1, 2, false, false, true, true, false, false, false, [], [], [], "", ["Personnel"], 1),
 	RoomInfo.new("Office", 4, 12, false, false, true, true, false, false, false, [], [], [], "", ["Administration"], 6),
@@ -179,17 +177,23 @@ var all_rooms = [
 	RoomInfo.new("Bridge", 8, 64, true, true, true, false, true, false, false, [], [], [], "", ["Control"], 1000),
 	RoomInfo.new("Fuel", 4, 16, false, false, true, false, false, true, false, [], [], [], "", ["Propulsion"], 4),
 	RoomInfo.new("Security", 4, 40, true, false, true, false, true, false, false, [], [], [], "", ["Secure"], 4),
-	RoomInfo.new("Prison", 2, 6, true, false, true, true, true, false, false, [], ["Security"], [], "", ["Secure"], 4), #yeah making sure some rooms are more secure would be cool, also forcing them to only spawn as subrooms maybe? also this wouldn't have an office as a subroom? maybe a locker and or a fresher, but we need a way to indicate that.
+	RoomInfo.new("Prison", 2, 6, false, false, true, true, true, true, false, [], ["Security"], [], "", ["Secure"], 4), #yeah making sure some rooms are more secure would be cool, also forcing them to only spawn as subrooms maybe? also this wouldn't have an office as a subroom? maybe a locker and or a fresher, but we need a way to indicate that.
 	RoomInfo.new("RepairBay", 6, 24, true, false, true, false, false, false, false, [], [], [], "", ["Repair"], 16),
-	RoomInfo.new("Workshop", 4, 32, false, false, true, true, false, false, true, ["Workbench", "ToolRack"], [], [], "", ["Repair"], 16),
+	RoomInfo.new("Workshop", 4, 32, true, false, true, true, false, false, true, ["Workbench", "ToolRack"], [], [], "", ["Repair"], 16),
 	RoomInfo.new("Engineering", 4, 200, true, true, true, false, false, false, false, [], [], [], "", ["Propulsion"], 60) #subrooms have to be smaller than parent - use the parents max size for this, maybe a way to have gaurenteed sub rooms - or at least more likely (repair bay, workshop)
 ]
-# Ship setups with required rooms and banned rooms for different classes
 
-var connectionmap = {
-	"SleepingQuarters":["Office","Laboratory","RepairBay"]
-}
-
+var connectionmap = [
+	["Office", "Greenhouse", "SleepingQuarters"],
+	["Workshop","RepairBay", "Factory", "Hangar"],
+	["Security","Lounge", "GunneryControl", "Office"],
+	["SmallStorage", "TrashCompactor", "Cargo"],
+	["Kitchen", "SmallStorage"],
+	["Messhall", "Lounge", "Greenhouse", "SmallStorage"],
+	["Medical", "SmallStorage","Laboratory"],
+	["Lounge","Medical","Office"],
+	["Laboratory", "Lounge"]
+]
 
 #required classes, and optional classes.
 #higher density is lower, it's how many tiles are required for a ship to have +1 person

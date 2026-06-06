@@ -1,0 +1,629 @@
+[gd_resource type="TileSet" load_steps=3 format=3 uid="uid://mf460o4c8d4a"]
+
+[ext_resource type="Texture2D" uid="uid://dmvsrjgknhuss" path="res://Workshop/Textures/tilesheet_complete_50.png" id="1_mwpvh"]
+
+[sub_resource type="TileSetAtlasSource" id="TileSetAtlasSource_hlff4"]
+texture = ExtResource("1_mwpvh")
+texture_region_size = Vector2i(32, 32)
+9:4/0 = 0
+9:4/0/terrain_set = 0
+9:4/0/terrain = 0
+9:4/0/terrains_peering_bit/right_side = 0
+9:4/0/terrains_peering_bit/bottom_side = 0
+9:4/0/custom_data_0 = Array[Dictionary]([{
+"id": 4,
+"name": "Corner",
+"orientation": 0
+}])
+10:4/0 = 0
+10:4/0/terrain_set = 0
+10:4/0/terrain = 0
+10:4/0/terrains_peering_bit/bottom_side = 0
+10:4/0/terrains_peering_bit/left_side = 0
+10:4/0/custom_data_0 = Array[Dictionary]([{
+"id": 4,
+"name": "Corner",
+"orientation": 22
+}])
+11:4/0 = 0
+11:4/0/terrain_set = 0
+11:4/0/terrain = 0
+11:4/0/terrains_peering_bit/right_side = 0
+11:4/0/terrains_peering_bit/left_side = 0
+11:4/0/custom_data_0 = Array[Dictionary]([{
+"id": 0,
+"name": "Corridor",
+"orientation": 10
+}])
+12:4/0 = 0
+12:4/0/terrain_set = 0
+12:4/0/terrain = 0
+12:4/0/terrains_peering_bit/right_side = 0
+12:4/0/terrains_peering_bit/bottom_side = 0
+12:4/0/terrains_peering_bit/left_side = 0
+12:4/0/custom_data_0 = Array[Dictionary]([{
+"id": 6,
+"name": "Intersection3way",
+"orientation": 0
+}])
+13:4/0 = 0
+13:4/0/terrain_set = 0
+13:4/0/terrain = 0
+13:4/0/terrains_peering_bit/right_side = 0
+13:4/0/terrains_peering_bit/left_side = 0
+13:4/0/terrains_peering_bit/top_side = 0
+13:4/0/custom_data_0 = Array[Dictionary]([{
+"id": 6,
+"name": "Intersection3way",
+"orientation": 10
+}])
+14:4/0 = 0
+14:4/0/terrain_set = 0
+14:4/0/terrain = 0
+14:4/0/terrains_peering_bit/left_side = 0
+14:4/0/custom_data_0 = Array[Dictionary]([{
+"id": 7,
+"name": "DeadEnd",
+"orientation": 22
+}])
+15:4/0 = 0
+15:4/0/terrain_set = 0
+15:4/0/terrain = 0
+15:4/0/terrains_peering_bit/top_side = 0
+15:4/0/custom_data_0 = Array[Dictionary]([{
+"id": 7,
+"name": "DeadEnd",
+"orientation": 10
+}])
+16:4/0 = 0
+16:4/0/terrain_set = 0
+16:4/0/terrain = 0
+16:4/0/terrains_peering_bit/right_side = 0
+16:4/0/terrains_peering_bit/bottom_right_corner = 0
+16:4/0/terrains_peering_bit/bottom_side = 0
+16:4/0/custom_data_0 = Array[Dictionary]([{
+"id": 5,
+"name": "CornerNoWall",
+"orientation": 10
+}])
+17:4/0 = 0
+17:4/0/terrain_set = 0
+17:4/0/terrain = 0
+17:4/0/terrains_peering_bit/bottom_side = 0
+17:4/0/terrains_peering_bit/bottom_left_corner = 0
+17:4/0/terrains_peering_bit/left_side = 0
+17:4/0/custom_data_0 = Array[Dictionary]([{
+"id": 5,
+"name": "CornerNoWall",
+"orientation": 16
+}])
+9:5/0 = 0
+9:5/0/terrain_set = 0
+9:5/0/terrain = 0
+9:5/0/terrains_peering_bit/right_side = 0
+9:5/0/terrains_peering_bit/top_side = 0
+9:5/0/custom_data_0 = Array[Dictionary]([{
+"id": 4,
+"name": "Corner",
+"orientation": 16
+}])
+10:5/0 = 0
+10:5/0/terrain_set = 0
+10:5/0/terrain = 0
+10:5/0/terrains_peering_bit/left_side = 0
+10:5/0/terrains_peering_bit/top_side = 0
+10:5/0/custom_data_0 = Array[Dictionary]([{
+"id": 4,
+"name": "Corner",
+"orientation": 10
+}])
+11:5/0 = 0
+11:5/0/terrain_set = 0
+11:5/0/terrain = 0
+11:5/0/terrains_peering_bit/bottom_side = 0
+11:5/0/terrains_peering_bit/top_side = 0
+11:5/0/custom_data_0 = Array[Dictionary]([{
+"id": 0,
+"name": "Corridor",
+"orientation": 16
+}])
+12:5/0 = 0
+12:5/0/terrain_set = 0
+12:5/0/terrain = 0
+12:5/0/terrains_peering_bit/right_side = 0
+12:5/0/terrains_peering_bit/bottom_side = 0
+12:5/0/terrains_peering_bit/top_side = 0
+12:5/0/custom_data_0 = Array[Dictionary]([{
+"id": 6,
+"name": "Intersection3way",
+"orientation": 16
+}])
+13:5/0 = 0
+13:5/0/terrain_set = 0
+13:5/0/terrain = 0
+13:5/0/terrains_peering_bit/bottom_side = 0
+13:5/0/terrains_peering_bit/left_side = 0
+13:5/0/terrains_peering_bit/top_side = 0
+13:5/0/custom_data_0 = Array[Dictionary]([{
+"id": 6,
+"name": "Intersection3way",
+"orientation": 22
+}])
+14:5/0 = 0
+14:5/0/terrain_set = 0
+14:5/0/terrain = 0
+14:5/0/terrains_peering_bit/bottom_side = 0
+14:5/0/custom_data_0 = Array[Dictionary]([{
+"id": 7,
+"name": "DeadEnd",
+"orientation": 0
+}])
+15:5/0 = 0
+15:5/0/terrain_set = 0
+15:5/0/terrain = 0
+15:5/0/terrains_peering_bit/right_side = 0
+15:5/0/custom_data_0 = Array[Dictionary]([{
+"id": 7,
+"name": "DeadEnd",
+"orientation": 16
+}])
+16:5/0 = 0
+16:5/0/terrain_set = 0
+16:5/0/terrain = 0
+16:5/0/terrains_peering_bit/right_side = 0
+16:5/0/terrains_peering_bit/top_side = 0
+16:5/0/terrains_peering_bit/top_right_corner = 0
+16:5/0/custom_data_0 = Array[Dictionary]([{
+"id": 5,
+"name": "CornerNoWall",
+"orientation": 22
+}])
+17:5/0 = 0
+17:5/0/terrain_set = 0
+17:5/0/terrain = 0
+17:5/0/terrains_peering_bit/left_side = 0
+17:5/0/terrains_peering_bit/top_left_corner = 0
+17:5/0/terrains_peering_bit/top_side = 0
+17:5/0/custom_data_0 = Array[Dictionary]([{
+"id": 5,
+"name": "CornerNoWall",
+"orientation": 0
+}])
+9:6/0 = 0
+9:6/0/terrain_set = 0
+9:6/0/terrain = 0
+9:6/0/terrains_peering_bit/right_side = 0
+9:6/0/terrains_peering_bit/bottom_side = 0
+9:6/0/terrains_peering_bit/bottom_left_corner = 0
+9:6/0/terrains_peering_bit/left_side = 0
+9:6/0/terrains_peering_bit/top_left_corner = 0
+9:6/0/terrains_peering_bit/top_side = 0
+9:6/0/terrains_peering_bit/top_right_corner = 0
+9:6/0/custom_data_0 = Array[Dictionary]([{
+"id": 8,
+"name": "1pillar",
+"orientation": 0
+}])
+10:6/0 = 0
+10:6/0/terrain_set = 0
+10:6/0/terrain = 0
+10:6/0/terrains_peering_bit/right_side = 0
+10:6/0/terrains_peering_bit/bottom_right_corner = 0
+10:6/0/terrains_peering_bit/bottom_side = 0
+10:6/0/terrains_peering_bit/left_side = 0
+10:6/0/terrains_peering_bit/top_left_corner = 0
+10:6/0/terrains_peering_bit/top_side = 0
+10:6/0/terrains_peering_bit/top_right_corner = 0
+10:6/0/custom_data_0 = Array[Dictionary]([{
+"id": 8,
+"name": "1pillar",
+"orientation": 22
+}])
+11:6/0 = 0
+11:6/0/terrain_set = 0
+11:6/0/terrain = 0
+11:6/0/terrains_peering_bit/right_side = 0
+11:6/0/terrains_peering_bit/bottom_side = 0
+11:6/0/terrains_peering_bit/left_side = 0
+11:6/0/terrains_peering_bit/top_left_corner = 0
+11:6/0/terrains_peering_bit/top_side = 0
+11:6/0/terrains_peering_bit/top_right_corner = 0
+11:6/0/custom_data_0 = Array[Dictionary]([{
+"id": 2,
+"name": "Doorway",
+"orientation": 0
+}])
+12:6/0 = 0
+12:6/0/terrain_set = 0
+12:6/0/terrain = 0
+12:6/0/terrains_peering_bit/right_side = 0
+12:6/0/terrains_peering_bit/bottom_right_corner = 0
+12:6/0/terrains_peering_bit/bottom_side = 0
+12:6/0/terrains_peering_bit/bottom_left_corner = 0
+12:6/0/terrains_peering_bit/left_side = 0
+12:6/0/terrains_peering_bit/top_side = 0
+12:6/0/custom_data_0 = Array[Dictionary]([{
+"id": 2,
+"name": "Doorway",
+"orientation": 10
+}])
+13:6/0 = 0
+13:6/0/terrain_set = 0
+13:6/0/terrain = 0
+13:6/0/terrains_peering_bit/right_side = 0
+13:6/0/terrains_peering_bit/bottom_right_corner = 0
+13:6/0/terrains_peering_bit/bottom_side = 0
+13:6/0/terrains_peering_bit/top_side = 0
+13:6/0/terrains_peering_bit/top_right_corner = 0
+13:6/0/custom_data_0 = Array[Dictionary]([{
+"id": 3,
+"name": "Wall",
+"orientation": 22
+}])
+14:6/0 = 0
+14:6/0/terrain_set = 0
+14:6/0/terrain = 0
+14:6/0/terrains_peering_bit/bottom_side = 0
+14:6/0/terrains_peering_bit/bottom_left_corner = 0
+14:6/0/terrains_peering_bit/left_side = 0
+14:6/0/terrains_peering_bit/top_left_corner = 0
+14:6/0/terrains_peering_bit/top_side = 0
+14:6/0/custom_data_0 = Array[Dictionary]([{
+"id": 3,
+"name": "Wall",
+"orientation": 16
+}])
+15:6/0 = 0
+15:6/0/terrain_set = 0
+15:6/0/terrain = 0
+15:6/0/terrains_peering_bit/right_side = 0
+15:6/0/terrains_peering_bit/bottom_right_corner = 0
+15:6/0/terrains_peering_bit/bottom_side = 0
+15:6/0/terrains_peering_bit/bottom_left_corner = 0
+15:6/0/terrains_peering_bit/left_side = 0
+15:6/0/terrains_peering_bit/top_left_corner = 0
+15:6/0/terrains_peering_bit/top_side = 0
+15:6/0/terrains_peering_bit/top_right_corner = 0
+15:6/0/custom_data_0 = Array[Dictionary]([{
+"id": 13,
+"name": "Nought",
+"orientation": 0
+}])
+16:6/0 = 0
+16:6/0/terrain_set = 0
+16:6/0/terrain = 0
+16:6/0/terrains_peering_bit/right_side = 0
+16:6/0/terrains_peering_bit/bottom_side = 0
+16:6/0/terrains_peering_bit/left_side = 0
+16:6/0/terrains_peering_bit/top_side = 0
+16:6/0/custom_data_0 = Array[Dictionary]([{
+"id": 1,
+"name": "Intersection4way",
+"orientation": 10
+}])
+17:6/0 = 0
+17:6/0/terrain_set = 0
+17:6/0/custom_data_0 = Array[Dictionary]([{
+"id": -1,
+"name": "",
+"orientation": -1
+}])
+9:7/0 = 0
+9:7/0/terrain_set = 0
+9:7/0/terrain = 0
+9:7/0/terrains_peering_bit/right_side = 0
+9:7/0/terrains_peering_bit/bottom_right_corner = 0
+9:7/0/terrains_peering_bit/bottom_side = 0
+9:7/0/terrains_peering_bit/bottom_left_corner = 0
+9:7/0/terrains_peering_bit/left_side = 0
+9:7/0/terrains_peering_bit/top_left_corner = 0
+9:7/0/terrains_peering_bit/top_side = 0
+9:7/0/custom_data_0 = Array[Dictionary]([{
+"id": 8,
+"name": "1pillar",
+"orientation": 16
+}])
+10:7/0 = 0
+10:7/0/terrain_set = 0
+10:7/0/terrain = 0
+10:7/0/terrains_peering_bit/right_side = 0
+10:7/0/terrains_peering_bit/bottom_right_corner = 0
+10:7/0/terrains_peering_bit/bottom_side = 0
+10:7/0/terrains_peering_bit/bottom_left_corner = 0
+10:7/0/terrains_peering_bit/left_side = 0
+10:7/0/terrains_peering_bit/top_side = 0
+10:7/0/terrains_peering_bit/top_right_corner = 0
+10:7/0/custom_data_0 = Array[Dictionary]([{
+"id": 8,
+"name": "1pillar",
+"orientation": 10
+}])
+11:7/0 = 0
+11:7/0/terrain_set = 0
+11:7/0/terrain = 0
+11:7/0/terrains_peering_bit/right_side = 0
+11:7/0/terrains_peering_bit/bottom_side = 0
+11:7/0/terrains_peering_bit/bottom_left_corner = 0
+11:7/0/terrains_peering_bit/left_side = 0
+11:7/0/terrains_peering_bit/top_left_corner = 0
+11:7/0/terrains_peering_bit/top_side = 0
+11:7/0/custom_data_0 = Array[Dictionary]([{
+"id": 2,
+"name": "Doorway",
+"orientation": 16
+}])
+12:7/0 = 0
+12:7/0/terrain_set = 0
+12:7/0/terrain = 0
+12:7/0/terrains_peering_bit/right_side = 0
+12:7/0/terrains_peering_bit/bottom_right_corner = 0
+12:7/0/terrains_peering_bit/bottom_side = 0
+12:7/0/terrains_peering_bit/left_side = 0
+12:7/0/terrains_peering_bit/top_side = 0
+12:7/0/terrains_peering_bit/top_right_corner = 0
+12:7/0/custom_data_0 = Array[Dictionary]([{
+"id": 2,
+"name": "Doorway",
+"orientation": 22
+}])
+13:7/0 = 0
+13:7/0/terrain_set = 0
+13:7/0/terrain = 0
+13:7/0/terrains_peering_bit/right_side = 0
+13:7/0/terrains_peering_bit/bottom_right_corner = 0
+13:7/0/terrains_peering_bit/bottom_side = 0
+13:7/0/terrains_peering_bit/bottom_left_corner = 0
+13:7/0/terrains_peering_bit/left_side = 0
+13:7/0/custom_data_0 = Array[Dictionary]([{
+"id": 3,
+"name": "Wall",
+"orientation": 10
+}])
+14:7/0 = 0
+14:7/0/terrain_set = 0
+14:7/0/terrain = 0
+14:7/0/terrains_peering_bit/right_side = 0
+14:7/0/terrains_peering_bit/left_side = 0
+14:7/0/terrains_peering_bit/top_left_corner = 0
+14:7/0/terrains_peering_bit/top_side = 0
+14:7/0/terrains_peering_bit/top_right_corner = 0
+14:7/0/custom_data_0 = Array[Dictionary]([{
+"id": 3,
+"name": "Wall",
+"orientation": 0
+}])
+15:7/0 = 0
+15:7/0/terrain_set = 0
+15:7/0/terrain = 0
+15:7/0/custom_data_0 = Array[Dictionary]([{
+"id": 13,
+"name": "Nought",
+"orientation": 0
+}])
+16:7/0 = 0
+16:7/0/terrain_set = 0
+16:7/0/custom_data_0 = Array[Dictionary]([{
+"id": -1,
+"name": "",
+"orientation": -1
+}])
+17:7/0 = 0
+17:7/0/terrain_set = 0
+17:7/0/custom_data_0 = Array[Dictionary]([{
+"id": -1,
+"name": "",
+"orientation": -1
+}])
+9:8/0 = 0
+9:8/0/terrain_set = 0
+9:8/0/terrain = 0
+9:8/0/terrains_peering_bit/right_side = 0
+9:8/0/terrains_peering_bit/bottom_right_corner = 0
+9:8/0/terrains_peering_bit/bottom_side = 0
+9:8/0/terrains_peering_bit/left_side = 0
+9:8/0/terrains_peering_bit/top_side = 0
+9:8/0/custom_data_0 = Array[Dictionary]([{
+"id": 9,
+"name": "3pillar",
+"orientation": 0
+}])
+10:8/0 = 0
+10:8/0/terrain_set = 0
+10:8/0/terrain = 0
+10:8/0/terrains_peering_bit/right_side = 0
+10:8/0/terrains_peering_bit/bottom_side = 0
+10:8/0/terrains_peering_bit/bottom_left_corner = 0
+10:8/0/terrains_peering_bit/left_side = 0
+10:8/0/terrains_peering_bit/top_side = 0
+10:8/0/custom_data_0 = Array[Dictionary]([{
+"id": 9,
+"name": "3pillar",
+"orientation": 22
+}])
+11:8/0 = 0
+11:8/0/terrain_set = 0
+11:8/0/terrain = 0
+11:8/0/terrains_peering_bit/right_side = 0
+11:8/0/terrains_peering_bit/bottom_right_corner = 0
+11:8/0/terrains_peering_bit/bottom_side = 0
+11:8/0/terrains_peering_bit/top_side = 0
+11:8/0/custom_data_0 = Array[Dictionary]([{
+"id": 11,
+"name": "WallAbdPillartwo",
+"orientation": 0
+}])
+12:8/0 = 0
+12:8/0/terrain_set = 0
+12:8/0/terrain = 0
+12:8/0/terrains_peering_bit/bottom_side = 0
+12:8/0/terrains_peering_bit/bottom_left_corner = 0
+12:8/0/terrains_peering_bit/left_side = 0
+12:8/0/terrains_peering_bit/top_side = 0
+12:8/0/custom_data_0 = Array[Dictionary]([{
+"id": 10,
+"name": "WallandPillarOne",
+"orientation": 22
+}])
+13:8/0 = 0
+13:8/0/terrain_set = 0
+13:8/0/terrain = 0
+13:8/0/terrains_peering_bit/right_side = 0
+13:8/0/terrains_peering_bit/bottom_right_corner = 0
+13:8/0/terrains_peering_bit/bottom_side = 0
+13:8/0/terrains_peering_bit/left_side = 0
+13:8/0/custom_data_0 = Array[Dictionary]([{
+"id": 10,
+"name": "WallandPillarOne",
+"orientation": 0
+}])
+14:8/0 = 0
+14:8/0/terrain_set = 0
+14:8/0/terrain = 0
+14:8/0/terrains_peering_bit/right_side = 0
+14:8/0/terrains_peering_bit/bottom_side = 0
+14:8/0/terrains_peering_bit/bottom_left_corner = 0
+14:8/0/terrains_peering_bit/left_side = 0
+14:8/0/custom_data_0 = Array[Dictionary]([{
+"id": 11,
+"name": "WallAbdPillartwo",
+"orientation": 22
+}])
+15:8/0 = 0
+15:8/0/terrain_set = 0
+15:8/0/terrain = 0
+15:8/0/terrains_peering_bit/right_side = 0
+15:8/0/terrains_peering_bit/bottom_right_corner = 0
+15:8/0/terrains_peering_bit/bottom_side = 0
+15:8/0/terrains_peering_bit/left_side = 0
+15:8/0/terrains_peering_bit/top_left_corner = 0
+15:8/0/terrains_peering_bit/top_side = 0
+15:8/0/custom_data_0 = Array[Dictionary]([{
+"id": 12,
+"name": "2pillar",
+"orientation": 16
+}])
+16:8/0 = 0
+16:8/0/terrain_set = 0
+16:8/0/custom_data_0 = Array[Dictionary]([{
+"id": -1,
+"name": "",
+"orientation": -1
+}])
+17:8/0 = 0
+17:8/0/terrain_set = 0
+17:8/0/custom_data_0 = Array[Dictionary]([{
+"id": -1,
+"name": "",
+"orientation": -1
+}])
+9:9/0 = 0
+9:9/0/terrain_set = 0
+9:9/0/terrain = 0
+9:9/0/terrains_peering_bit/right_side = 0
+9:9/0/terrains_peering_bit/bottom_side = 0
+9:9/0/terrains_peering_bit/left_side = 0
+9:9/0/terrains_peering_bit/top_side = 0
+9:9/0/terrains_peering_bit/top_right_corner = 0
+9:9/0/custom_data_0 = Array[Dictionary]([{
+"id": 9,
+"name": "3pillar",
+"orientation": 16
+}])
+10:9/0 = 0
+10:9/0/terrain_set = 0
+10:9/0/terrain = 0
+10:9/0/terrains_peering_bit/right_side = 0
+10:9/0/terrains_peering_bit/bottom_side = 0
+10:9/0/terrains_peering_bit/left_side = 0
+10:9/0/terrains_peering_bit/top_left_corner = 0
+10:9/0/terrains_peering_bit/top_side = 0
+10:9/0/custom_data_0 = Array[Dictionary]([{
+"id": 9,
+"name": "3pillar",
+"orientation": 10
+}])
+11:9/0 = 0
+11:9/0/terrain_set = 0
+11:9/0/terrain = 0
+11:9/0/terrains_peering_bit/right_side = 0
+11:9/0/terrains_peering_bit/bottom_side = 0
+11:9/0/terrains_peering_bit/top_side = 0
+11:9/0/terrains_peering_bit/top_right_corner = 0
+11:9/0/custom_data_0 = Array[Dictionary]([{
+"id": 10,
+"name": "WallandPillarOne",
+"orientation": 16
+}])
+12:9/0 = 0
+12:9/0/terrain_set = 0
+12:9/0/terrain = 0
+12:9/0/terrains_peering_bit/bottom_side = 0
+12:9/0/terrains_peering_bit/left_side = 0
+12:9/0/terrains_peering_bit/top_left_corner = 0
+12:9/0/terrains_peering_bit/top_side = 0
+12:9/0/custom_data_0 = Array[Dictionary]([{
+"id": 11,
+"name": "WallAbdPillartwo",
+"orientation": 10
+}])
+13:9/0 = 0
+13:9/0/terrain_set = 0
+13:9/0/terrain = 0
+13:9/0/terrains_peering_bit/right_side = 0
+13:9/0/terrains_peering_bit/left_side = 0
+13:9/0/terrains_peering_bit/top_side = 0
+13:9/0/terrains_peering_bit/top_right_corner = 0
+13:9/0/custom_data_0 = Array[Dictionary]([{
+"id": 11,
+"name": "WallAbdPillartwo",
+"orientation": 16
+}])
+14:9/0 = 0
+14:9/0/terrain_set = 0
+14:9/0/terrain = 0
+14:9/0/terrains_peering_bit/right_side = 0
+14:9/0/terrains_peering_bit/left_side = 0
+14:9/0/terrains_peering_bit/top_left_corner = 0
+14:9/0/terrains_peering_bit/top_side = 0
+14:9/0/custom_data_0 = Array[Dictionary]([{
+"id": 10,
+"name": "WallandPillarOne",
+"orientation": 10
+}])
+15:9/0 = 0
+15:9/0/terrain_set = 0
+15:9/0/terrain = 0
+15:9/0/terrains_peering_bit/right_side = 0
+15:9/0/terrains_peering_bit/bottom_side = 0
+15:9/0/terrains_peering_bit/bottom_left_corner = 0
+15:9/0/terrains_peering_bit/left_side = 0
+15:9/0/terrains_peering_bit/top_side = 0
+15:9/0/terrains_peering_bit/top_right_corner = 0
+15:9/0/custom_data_0 = Array[Dictionary]([{
+"id": 12,
+"name": "2pillar",
+"orientation": 10
+}])
+16:9/0 = 0
+16:9/0/terrain_set = 0
+16:9/0/custom_data_0 = Array[Dictionary]([{
+"id": -1,
+"name": "",
+"orientation": -1
+}])
+17:9/0 = 0
+17:9/0/terrain_set = 0
+17:9/0/custom_data_0 = Array[Dictionary]([{
+"id": -1,
+"name": "",
+"orientation": -1
+}])
+
+[resource]
+tile_size = Vector2i(32, 32)
+terrain_set_0/mode = 0
+terrain_set_0/terrain_0/name = "BaseMap"
+terrain_set_0/terrain_0/color = Color(0.711961, 0, 0.294297, 1)
+custom_data_layer_0/name = "gml"
+custom_data_layer_0/type = 28
+sources/1 = SubResource("TileSetAtlasSource_hlff4")

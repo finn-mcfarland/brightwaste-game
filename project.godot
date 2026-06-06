@@ -26,6 +26,10 @@ shapes/collision/shape_color=Color(0.60577, 0.528787, 0.330646, 1)
 
 mouse_cursor/custom_image="uid://6dba7hioghir"
 
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/grid_map_layer/plugin.cfg")
+
 [input]
 
 ui_cancel={

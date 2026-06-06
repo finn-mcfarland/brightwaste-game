@@ -1,14 +1,16 @@
-[gd_scene load_steps=14 format=3 uid="uid://dkvrivnqxbvvu"]
+[gd_scene load_steps=16 format=3 uid="uid://dkvrivnqxbvvu"]
 
 [ext_resource type="PackedScene" uid="uid://ccdh3wy21fgkp" path="res://Prefabs/player.tscn" id="2_bo1nx"]
 [ext_resource type="PackedScene" uid="uid://cgx5xq6e0orec" path="res://Prefabs/console.tscn" id="3_8gbba"]
 [ext_resource type="PackedScene" uid="uid://cio2n0f7v1e5j" path="res://Prefabs/collectible.tscn" id="4_6bp64"]
 [ext_resource type="PackedScene" uid="uid://df2twgr1xbl8g" path="res://Workshop/Imports/drone.tscn" id="4_jjvhh"]
 [ext_resource type="PackedScene" uid="uid://clb5y1ajyid73" path="res://Prefabs/engine.tscn" id="5_344ge"]
-[ext_resource type="Script" uid="uid://dsyb0jwoho7ni" path="res://Scripts/ship_generator_and_controller.gd" id="5_kry3j"]
+[ext_resource type="Script" uid="uid://xh23wmorkban" path="res://Scripts/ship_generator_and_controller.gd" id="5_kry3j"]
 [ext_resource type="PackedScene" uid="uid://dsldx6k8bndqr" path="res://Prefabs/PauseMenu.tscn" id="6_21xkr"]
 [ext_resource type="PackedScene" uid="uid://d2mkpvcj3gfec" path="res://Prefabs/door.tscn" id="6_ynf5e"]
-[ext_resource type="MeshLibrary" uid="uid://0l6m73f5n147" path="res://Workshop/Libraries/Corridors.tres" id="7_ynf5e"]
+[ext_resource type="MeshLibrary" uid="uid://cso1cqs6cqumt" path="res://Workshop/Libraries/Corridors.tres" id="7_ynf5e"]
+[ext_resource type="TileSet" uid="uid://mf460o4c8d4a" path="res://Workshop/Libraries/main.tres" id="9_hptm8"]
+[ext_resource type="Script" uid="uid://cqx55iw26lbyf" path="res://addons/grid_map_layer/scripts/grid_map_layer.gd" id="10_d1ilt"]
 
 [sub_resource type="ProceduralSkyMaterial" id="ProceduralSkyMaterial_kry3j"]
 
@@ -189,8 +191,16 @@ script = ExtResource("5_kry3j")
 [node name="Corridor" type="GridMap" parent="ShipBase"]
 mesh_library = ExtResource("7_ynf5e")
 cell_size = Vector3(1, 1.5, 1)
-metadata/_editor_floor_ = Vector3(0, 0, 0)
+cell_center_y = false
+metadata/_editor_floor_ = Vector3(0, 1, 0)
 
 [node name="Marker3D" type="Marker3D" parent="ShipBase"]
+
+[node name="GridMapLayer" type="TileMapLayer" parent="ShipBase" node_paths=PackedStringArray("target_gridmap")]
+tile_set = ExtResource("9_hptm8")
+script = ExtResource("10_d1ilt")
+target_gridmap = NodePath("../Corridor")
+target_layer = 1
+metadata/_custom_type_script = "uid://cqx55iw26lbyf"
 
 [node name="Control" parent="." instance=ExtResource("6_21xkr")]

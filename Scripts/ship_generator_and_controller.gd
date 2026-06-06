@@ -8,6 +8,8 @@ var tile_size = 1
 var room_height = 1.5
 var ship_length_ratio = 2.5
 
+var vertical_corridor_xs: Array = []  # class level
+var available_space_rooms
 var max_width
 var max_length
 
@@ -15,6 +17,7 @@ var max_length
 #shut off the power to the gens
 var wiring_layouts = ["fractal_grid", "mininum_spanning_tree", "regular_tree"]
 @onready var corridor_map := $Corridor
+@onready var GridMapAutotiler := $GridMapLayer
 
 func _ready():
 	randomize()
@@ -72,9 +75,9 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 	#print("dimensions x and z: "+ str(dimensions))
 	var current_length = 0
 	var sliding_origin: Vector3 = origin
-	var available_space_rooms = []
+	available_space_rooms = []
 	var horizontal_divider_length_coords : Array = []
-
+	var recording_of_corridor_placements : Array = []
 	# Define or generate widths along the ship's length
 	var width_array = []
 	while current_length < dimensions.z:
@@ -100,7 +103,6 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 		var new_rooms = []
 		
 		# Corridor/Line logic
-		draw_line(total_width, Vector3.RIGHT, sliding_origin)
 		
 		# 1. Determine if Symmetry is even allowed (Constraint: Width 8+)
 		var is_symmetrical = false
@@ -117,8 +119,9 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 			right_width = left_width
 			var center_width = total_width - (left_width * 2) - 2 # 2 corridors
 			
-			draw_symmetrical_segment(sliding_origin, left_width, total_width, segment_length)
-			
+			#draw_symmetrical_segment(sliding_origin, left_width, total_width, segment_length)
+			vertical_corridor_xs.append(roundi(sliding_origin.x) + left_width)
+			recording_of_corridor_placements.append([sliding_origin, left_width, total_width, segment_length, "Symmetrical"])
 			new_rooms = [
 				[sliding_origin.x, sliding_origin.z + 1, left_width, segment_length - 1],
 				[sliding_origin.x + left_width + 1, sliding_origin.z + 1, center_width, segment_length - 1],
@@ -158,7 +161,10 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 				left_width = options[randi() % options.size()]
 				right_width = total_width - left_width - 1
 
-			draw_asymmetrical_segment(sliding_origin, total_width, segment_length, left_width)
+			#draw_asymmetrical_segment(sliding_origin, left_width, total_width, segment_length)
+			recording_of_corridor_placements.append([sliding_origin, left_width, total_width, segment_length, "Asymmetrical"])
+			vertical_corridor_xs.append(roundi(sliding_origin.x) + left_width)
+
 
 			# Add rooms only if they have a width > 0
 			if left_width > 0:
@@ -180,9 +186,7 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 
  
 
-	draw_line(dimensions.x, Vector3.RIGHT, origin)
-	draw_line(dimensions.x, Vector3.RIGHT, Vector3(origin.x, origin.y, origin.z + sliding_origin.z))
-
+	
 	#END CORRIDOR CONSTRUCTION
 	
 	#empty out 0 width boxes.
@@ -289,7 +293,7 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 				unassigned.pop_at(j)
 				
 				matched = true
-				break # CRITICAL: Stop searching. We only want a pair.
+				break 
 
 		# 5. If no partner was found, add root as a single cluster
 		if not matched:
@@ -431,10 +435,9 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 			print("Failed to place group: ", group)
 			print()
 
-	print("Rooms assigned to spaces: ", rooms_assigned_to_spaces)
+	#print("Rooms assigned to spaces: ", rooms_assigned_to_spaces)
 	print("Remaining space: ", space_left)
 
-	print("--------------next floor--------------")
 	#endregion
 
 
@@ -442,39 +445,422 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 
 	#if we get to here, all the rooms fit, and we might have spare space, so grab
 	for i in range(len(available_space_rooms)):
-		#this is a patch . we need to not have empty spaces, for the script below to work
-		#i would also like to place corridors through large spaces if they're full of small rooms[FIX]
 		if rooms_assigned_to_spaces[i] == []:
-			print("empty space - removed from division, as recursive room dividing algorithm assumes contents")
 			continue
-		
 		divide_space(available_space_rooms[i], rooms_assigned_to_spaces[i], origin.y)
-		
+	
+	GridMapAutotiler._set_gridmap_tiles_impl()
+	#GridMapAutotiler.clear()
+	draw_line(max_width, Vector3.RIGHT, sliding_origin)
+	for c in recording_of_corridor_placements:
+		if c[-1] == "Asymmetrical":
+			draw_asymmetrical_segment(c[0], c[1], c[2], c[3])
+		elif c[-1] == "Symmetrical":
+			draw_symmetrical_segment(c[0], c[1], c[2], c[3])
+	draw_line(dimensions.x, Vector3.RIGHT, origin)
+	draw_line(dimensions.x, Vector3.RIGHT, Vector3(origin.x, origin.y, origin.z + sliding_origin.z))
+	
+	print("--------------next floor--------------")
 	#for all this, we will need - list of rooms and thier locations,
 	rooms_assigned_to_spaces #get pos values
 	#list of spaces
 	available_space_rooms
 	#lookup index for room merging, 
-	pass #global
+	Global.connectionmap
 	#style+ prop + layoutsheet for room construction,
 	pass #global
+
 	#rooms that can have subrooms + rooms that have space for it
-	pass #to be written combo subroom min size with rooms assigned to spaces size variable
+	var rooms_that_can_have_freshers = []
+	var rooms_that_can_have_lockers = []
+	for room in spawned_room_list:
+		if room.info.can_be_complex_room and room.size > Vector3(3,1,3):
+			if "Personnel" in room.info.room_class:
+				rooms_that_can_have_freshers.append(room)
+			rooms_that_can_have_lockers.append(room)
+	GridMapAutotiler._set_gridmap_tiles_impl()
 	#code that connects rooms with doors
-	pass #to be written - likely to just be adjacency check + lookup index
+	#to be written - likely to just be adjacency check + lookup index
+	for i in range(rooms_assigned_to_spaces.size()):
+		var rooms: Array = rooms_assigned_to_spaces[i]
+		print("space ", i, " rooms=", rooms.size(), " space=", available_space_rooms[i])
+		if rooms.is_empty():
+			pass
+		elif rooms.size() == 1:
+			carve_connection(rooms[0], available_space_rooms[i])
+		else:
+			generate_room_tree(rooms, available_space_rooms[i])
+						
 	#extra room builder/improved populate function that only runs here?
+	spawned_room_list.sort_custom(custom_room_sort)
 	pass #to be written check empty spaces, fill em up with Sci Fi Stuff
 	#self divide room portion sizes 
 	pass # to be written #should just be 2x2 in most cases, but we've needed to rework the room variables for a while anyway lol
 		#next on the list:--------------------------------
-		#set up door and inter-room connection system + merge certain rooms if they're small and compatible for more intersting layouts
+		
 		#segment placed rooms if they're over max_size - only internally, tie to inter - room connection system
 		#build rooms internal inc engineering + bridge
 		#place fresher + locker in other rooms - ensure consistency with room connection tree
 		#place airlock at corridor ends - ban doors at airlock ends - probably do as room for door building and deco
 		#place fuel in empty spaces - get list of empty spaces, fill em up
 		#segment right sized rooms into portions - e.g escape pods in an escapepod room
+	#for placing rooms: rooms,fixsmall, corridors,doors
+	#end
+	
+	GridMapAutotiler._set_gridmap_tiles_impl()
+	GridMapAutotiler.clear()
+	
+func _has_corridor_access(room) -> bool:
+	var rx = roundi(room.position.x)
+	var rz = roundi(room.position.z)
+	var rw = roundi(room.size.x)
+	var rd = roundi(room.size.z)
+	
+	# Left and right walls — no corner exclusion for small rooms
+	for x in [rx, rx + rw - 1]:
+		var z_start = rz if rd <= 2 else rz + 1
+		var z_end = rz + rd if rd <= 2 else rz + rd - 1
+		for z in range(z_start, z_end):
+			var out = Vector2i(x + (-1 if x == rx else 1), z)
+			if out.x >= 0 and out.x < max_width and out.y >= 0 and out.y < max_length:
+				return true
+	
+	# Top and bottom walls — no corner exclusion for small rooms
+	for z in [rz, rz + rd - 1]:
+		var x_start = rx if rw <= 2 else rx + 1
+		var x_end = rx + rw if rw <= 2 else rx + rw - 1
+		for x in range(x_start, x_end):
+			var out = Vector2i(x, z + (-1 if z == rz else 1))
+			if out.x >= 0 and out.x < max_width and out.y >= 0 and out.y < max_length:
+				return true
+	return false
+
+
+	
+func carve_connection(room, space_rect, target_room = null) -> void:
+	# We will store pairs of adjacent tiles here: [[tile1, tile2], [tile1, tile2]...]
+	var potential_connections: Array[Array] = []
+
+	# ==================================================
+	# ROOM ↔ SPECIFIC ROOM
+	# ==================================================
+	if target_room != null:
+		var wall_rect = room.get_wall_tiles(target_room)
+		if wall_rect == null:
+			return
+
+		var vertical_wall: bool = wall_rect.size.x == 2
+
+		if vertical_wall:
+			var z_min = max(room.position.z, target_room.position.z)
+			var z_max = min(room.position.z + room.size.z, target_room.position.z + target_room.size.z)
 			
+			# Collect every valid adjacent pair along the shared vertical strip
+			for z in range(z_min, z_max):
+				var x = wall_rect.position.x
+				potential_connections.append([Vector2i(x, z), Vector2i(x + 1, z)])
+		else:
+			var x_min = max(room.position.x, target_room.position.x)
+			var x_max = min(room.position.x + room.size.x, target_room.position.x + target_room.size.x)
+			
+			# Collect every valid adjacent pair along the shared horizontal strip
+			for x in range(x_min, x_max):
+				var z = wall_rect.position.y
+				potential_connections.append([Vector2i(x, z), Vector2i(x, z + 1)])
+
+	# ==================================================
+	# ROOM → CORRIDOR
+	# ==================================================
+	else:
+		# Space rect bounds
+		var s_left = space_rect[0]
+		var s_right = space_rect[0] + space_rect[2]
+		var s_top = space_rect[1]
+		var s_bottom = space_rect[1] + space_rect[3]
+	
+		var on_left   = room.position.x == s_left and room.position.x > 0
+		var on_right  = room.position.x + room.size.x == s_right and (room.position.x + room.size.x) < max_width
+		var on_top    = room.position.z == s_top and room.position.z > 0
+		var on_bottom = room.position.z + room.size.z == s_bottom and (room.position.z + room.size.z) < max_length
+
+		var rx = roundi(room.position.x)
+		var rz = roundi(room.position.z)
+		var rw = roundi(room.size.x)
+		var rd = roundi(room.size.z)
+
+		# Collect valid edge spans, dropping corner exclusions for small rooms 
+		# to guarantee every room has at least 1 carvable tile.
+		if on_left:
+			var z_start = rz if rd <= 2 else rz + 1
+			var z_end = rz + rd if rd <= 2 else rz + rd - 1
+			for z in range(z_start, z_end):
+				potential_connections.append([Vector2i(rx, z), Vector2i(rx - 1, z)])
+				
+		if on_right:
+			var z_start = rz if rd <= 2 else rz + 1
+			var z_end = rz + rd if rd <= 2 else rz + rd - 1
+			for z in range(z_start, z_end):
+				potential_connections.append([Vector2i(rx + rw - 1, z), Vector2i(rx + rw, z)])
+				
+		if on_top:
+			var x_start = rx if rw <= 2 else rx + 1
+			var x_end = rx + rw if rw <= 2 else rx + rw - 1
+			for x in range(x_start, x_end):
+				potential_connections.append([Vector2i(x, rz), Vector2i(x, rz - 1)])
+				
+		if on_bottom:
+			var x_start = rx if rw <= 2 else rx + 1
+			var x_end = rx + rw if rw <= 2 else rx + rw - 1
+			for x in range(x_start, x_end):
+				potential_connections.append([Vector2i(x, rz + rd - 1), Vector2i(x, rz + rd)])
+			
+	# ==================================================
+	# CARVE RANDOM CHOICE
+	# ==================================================
+	if not potential_connections.is_empty():
+		var chosen_pair = potential_connections.pick_random()
+		var to_place: Array[Vector2i] = []
+		to_place.assign(chosen_pair)
+		GridMapAutotiler.set_cells_terrain_path(to_place, 0, 0, true)
+		room.has_corridor_access = true
+		
+func generate_room_tree(rooms_in_space: Array, space_rect: Array) -> void:
+	var accessible_rooms: Array = []
+	var inaccessible_rooms: Array = rooms_in_space.duplicate()
+	var carved_pairs: Dictionary = {}
+	
+	var mark_cluster_accessible = func(room: Object, acc_set: Array, inacc_set: Array, space_list: Array, self_callable: Callable) -> void:
+		if room not in acc_set:
+			acc_set.append(room)
+			inacc_set.erase(room)
+			for target in room.connections:
+				if target in space_list and target not in acc_set:
+					self_callable.call(target, acc_set, inacc_set, space_list, self_callable)
+
+	# ==================================================
+	# STEP 1: INITIAL CORRIDOR ANCHORING (ROUNDED UP)
+	# ==================================================
+	# Override secure checks for master rooms like Security and GunneryControl
+	var edge_rooms = rooms_in_space.filter(func(r): 
+		var is_secure = r.info.is_secure_room
+		var overrides_secure = r.info.room_name in ["Security", "GunneryControl"]
+		return is_room_on_mortar_edge(r, space_rect) and (not is_secure or overrides_secure)
+	)
+	
+	edge_rooms.shuffle()
+	
+	# Force anchor count to round UP to prevent oversized internal branching trees
+	var target_anchor_count = ceil(edge_rooms.size() * 0.7)
+	var anchors_placed = 0
+	
+	for room in edge_rooms:
+		var neighbor_already_anchored = false
+		for other in rooms_in_space:
+			if room != other and room.shares_wall_with(other) and other.has_corridor_access:
+				neighbor_already_anchored = true
+				break
+				
+		# Anchor if isolated, or if we haven't reached our rounded-up target quantity yet
+		if not neighbor_already_anchored or (anchors_placed < target_anchor_count):
+			carve_connection(room, space_rect)
+			room.has_corridor_access = true
+			mark_cluster_accessible.call(room, accessible_rooms, inaccessible_rooms, rooms_in_space, mark_cluster_accessible)
+			anchors_placed += 1
+
+	if accessible_rooms.is_empty() and not edge_rooms.is_empty():
+		var force_anchor = edge_rooms[0]
+		carve_connection(force_anchor, space_rect)
+		force_anchor.has_corridor_access = true
+		mark_cluster_accessible.call(force_anchor, accessible_rooms, inaccessible_rooms, rooms_in_space, mark_cluster_accessible)
+
+	# ==================================================
+	# STEP 2: CARVE PRE-FILLED MANDATORY ADJACENCIES
+	# ==================================================
+	for room in rooms_in_space:
+		for target in room.connections:
+			if target in rooms_in_space:
+				var pair_key = _get_pair_key(room, target)
+				if not carved_pairs.has(pair_key):
+					carve_connection(room, space_rect, target)
+					carved_pairs[pair_key] = true
+				if room not in target.connections: target.connections.append(room)
+				if target not in room.connections: room.connections.append(target)
+				
+				if room in accessible_rooms:
+					mark_cluster_accessible.call(target, accessible_rooms, inaccessible_rooms, rooms_in_space, mark_cluster_accessible)
+				elif target in accessible_rooms:
+					mark_cluster_accessible.call(room, accessible_rooms, inaccessible_rooms, rooms_in_space, mark_cluster_accessible)
+
+	# ==================================================
+	# STEP 3: ITERATIVE INTERNAL TREE EXPANSION
+	# ==================================================
+	var max_iterations = 500
+	while inaccessible_rooms.size() > 0 and max_iterations > 0:
+		max_iterations -= 1
+		var best_score: float = -1.0
+		var connection_to_make: Dictionary = {}
+
+		# PHASE A: Perfect, rule-abiding connection
+		for a_room in accessible_rooms:
+			if a_room.connections.size() >= a_room.max_connections: continue
+			for i_room in inaccessible_rooms:
+				if i_room.connections.size() >= i_room.max_connections: continue
+				
+				if a_room.shares_wall_with(i_room):
+					var score = calculate_connection_score(a_room, i_room, space_rect)
+					if score > best_score:
+						best_score = score
+						connection_to_make = {"from": a_room, "to": i_room}
+
+		if not connection_to_make.is_empty():
+			var r1 = connection_to_make.from
+			var r2 = connection_to_make.to
+			var pair_key = _get_pair_key(r1, r2)
+			
+			if not carved_pairs.has(pair_key):
+				carve_connection(r1, space_rect, r2)
+				carved_pairs[pair_key] = true
+			r1.connections.append(r2)
+			r2.connections.append(r1)
+			mark_cluster_accessible.call(r2, accessible_rooms, inaccessible_rooms, rooms_in_space, mark_cluster_accessible)
+		
+		else:
+			# INTERCEPT PHASE: Before breaking layout rules, can this floating room just anchor to the corridor instead?
+			var clean_anchor_carved = false
+			for i_room in inaccessible_rooms:
+				if is_room_on_mortar_edge(i_room, space_rect):
+					var is_secure = i_room.info.is_secure_room
+					var overrides_secure = i_room.info.room_name in ["Security", "GunneryControl"]
+					if not is_secure or overrides_secure:
+						carve_connection(i_room, space_rect)
+						i_room.has_corridor_access = true
+						mark_cluster_accessible.call(i_room, accessible_rooms, inaccessible_rooms, rooms_in_space, mark_cluster_accessible)
+						clean_anchor_carved = true
+						break
+			
+			if clean_anchor_carved:
+				continue # Loop back up; this room is now an anchor and its sanctioned neighbors can look for it!
+
+			# PHASE B: THE BRUTE-FORCE BREAKOUT (Only for truly landlocked, land-locked floating rooms)
+			var brute_force_forced = false
+			for i_room in inaccessible_rooms:
+				for a_room in accessible_rooms:
+					if a_room.shares_wall_with(i_room):
+						# Even in an emergency layout crash breakout, enforce name-bottleneck protection
+						if _causes_name_bottleneck(i_room, a_room) or _causes_name_bottleneck(a_room, i_room):
+							continue
+							
+						var pair_key = _get_pair_key(a_room, i_room)
+						if not carved_pairs.has(pair_key):
+							carve_connection(a_room, space_rect, i_room)
+							carved_pairs[pair_key] = true
+						
+						a_room.connections.append(i_room)
+						i_room.connections.append(a_room)
+						mark_cluster_accessible.call(i_room, accessible_rooms, inaccessible_rooms, rooms_in_space, mark_cluster_accessible)
+						brute_force_forced = true
+						break
+				if brute_force_forced: break
+			
+			if brute_force_forced:
+				continue
+				
+			# PHASE C: CRITICAL GEOMETRY FALLBACK
+			var emergency_corridor = false
+			for i_room in inaccessible_rooms:
+				if is_room_on_mortar_edge(i_room, space_rect):
+					carve_connection(i_room, space_rect)
+					i_room.has_corridor_access = true
+					mark_cluster_accessible.call(i_room, accessible_rooms, inaccessible_rooms, rooms_in_space, mark_cluster_accessible)
+					emergency_corridor = true
+					break
+			
+			if not emergency_corridor:
+				print("[Layout Error] Room is completely isolated geometrically: ", inaccessible_rooms[0].info.room_name)
+				inaccessible_rooms.remove_at(0)
+			continue
+
+	# ==================================================
+	# STEP 4: EXTRA NAVIGATION LOOPS (STRICT SANCTION ONLY)
+	# ==================================================
+	for r1 in accessible_rooms:
+		if r1.connections.size() >= r1.max_connections: continue
+		for r2 in accessible_rooms:
+			if r1 == r2 or r2.connections.size() >= r2.max_connections: continue
+			
+			var pair_key = _get_pair_key(r1, r2)
+			if carved_pairs.has(pair_key): continue
+			if r1.info.room_name == r2.info.room_name: continue 
+			
+			if r1.shares_wall_with(r2):
+				var score = calculate_connection_score(r1, r2, space_rect)
+				
+				# REMOVED the "or both have corridor access" bypass rule completely.
+				# Extra layout loops are now strictly allowed ONLY if sanctioned by connectionmap.
+				if score > 0.0:
+					carve_connection(r1, space_rect, r2)
+					carved_pairs[pair_key] = true
+					r1.connections.append(r2)
+					r2.connections.append(r1)
+					
+# Unique key helper using Object Instance IDs to prevent double carving
+func _get_pair_key(r1: Object, r2: Object) -> String:
+	var id1 = r1.get_instance_id()
+	var id2 = r2.get_instance_id()
+	return str(min(id1, id2)) + "_" + str(max(id1, id2))
+		
+
+func is_room_on_mortar_edge(room, space_rect: Array) -> bool:
+	var on_left   = room.position.x == space_rect[0] and room.position.x > 0
+	var on_right  = room.position.x + room.size.x == space_rect[0] + space_rect[2] and (room.position.x + room.size.x) < max_width
+	var on_top    = room.position.z == space_rect[1] and room.position.z > 0
+	var on_bottom = room.position.z + room.size.z == space_rect[1] + space_rect[3] and (room.position.z + room.size.z) < max_length
+	
+	return on_left or on_right or on_top or on_bottom
+	
+func calculate_connection_score(a, b, space_rect: Array) -> float:
+	var a_name = a.info.room_name
+	var b_name = b.info.room_name
+	if a_name == b_name: return -1.0
+	
+	# Deep-tree name bottleneck protection (stops room chains from getting trapped behind same-name rooms)
+	if _causes_name_bottleneck(b, a) or _causes_name_bottleneck(a, b): return -1.0
+	
+	# Apply connectionmap priorities - STRICTLY ENFORCED
+	var sanctioned = false
+	var score = 0.0
+	for pair in Global.connectionmap:
+		if a_name in pair and b_name in pair:
+			score += 25.0 
+			sanctioned = true
+			
+	# If it's not sanctioned by your connectionmap, completely ban it from normal tree expansion
+	if not sanctioned:
+		return -1.0
+		
+	return score
+
+# Helper pathfinder to prevent deep-tree same-name dead ends
+func _causes_name_bottleneck(new_room, link_room) -> bool:
+	if new_room.info.room_name == link_room.info.room_name: return true
+	var target_name = new_room.info.room_name
+	var visited = []
+	var queue = [link_room]
+	var reaches_corridor_cleanly = false
+	
+	while queue.size() > 0:
+		var current = queue.pop_front()
+		visited.append(current)
+		if current.info.room_name == target_name:
+			continue 
+		if current.get("has_corridor_access") == true:
+			reaches_corridor_cleanly = true
+			break
+		for n in current.connections:
+			if n not in visited and n not in queue:
+				queue.append(n)
+	return not reaches_corridor_cleanly
+	
 # --- MAIN DIVIDE FUNCTION ---
 func divide_space(space: Array, rooms: Array, floor_number: float) -> void:
 	if rooms.is_empty():
@@ -496,7 +882,9 @@ func divide_space(space: Array, rooms: Array, floor_number: float) -> void:
 	# --- 3. Base Case: Single Room ---
 	if rooms.size() == 1:
 		var r = rooms[0]
+		
 		r.populate_room(Vector3(s_w, room_height, s_d), Vector3(s_x, floor_number, s_z))
+		draw_box(s_x,s_z,s_w,s_d,floor_number)
 		return
 
 	# --- 4. Grouping Strategy (Adjacency Pairing) ---
@@ -598,7 +986,9 @@ func divide_space(space: Array, rooms: Array, floor_number: float) -> void:
 			# Default
 			groups[0] = [r0]
 			groups[1] = [r1]
-			
+		r1.connections.append(r0)
+		r0.connections.append(r1)
+		
 	# CASE B: Standard Partitioning
 	else:
 		var solved_groups = find_valid_partition(pool, s_w, s_d, axis, valid_groups_for_ext)
@@ -875,13 +1265,10 @@ func get_rigid_min_length(room_count: int, cross_slots: int) -> int:
 	var rows_needed = ceil(float(room_count) / float(cross_slots))
 	return int(rows_needed * 2)
 		
-
 # --- HELPER: is the space external (left/right) ---
 func is_space_external(space) -> bool:
 	# true if the subspace touches the left (x==0) or right (x+width==max_width) boundary
 	return space[0] == 0 or (space[0] + space[2] == max_width)
-
-# --- NEW/REVISED HELPER FUNCTIONS ---
 
 # Replaces 'find_valid_groups' entirely
 func can_split(space_w, space_d, axis, n0, n1) -> bool:
@@ -901,7 +1288,6 @@ func can_split(space_w, space_d, axis, n0, n1) -> bool:
 		var req1 = ceil(float(n1) / cross_slots) * 2
 		return (req0 + req1) <= space_d
 
-
 func canonical_key(g0: Array, g1: Array) -> String:
 	var k0 := []
 	var k1 := []
@@ -913,10 +1299,6 @@ func canonical_key(g0: Array, g1: Array) -> String:
 	k1.sort()
 	return str(k0) + "|" + str(k1)	
 		
-
-
-
-
 func group_rooms_by_adjacency(rooms: Array, room_counts: Dictionary) -> Array:
 	var unassigned := rooms.duplicate()
 	var groups := []
@@ -1003,7 +1385,6 @@ func room_quantities(ship_x_size: int, ship_z_size: int, selected_ship, floor_co
 	return floors
 
 # --- Helper Logic ---
-
 func _enforce_adjacency_ratios(counts: Dictionary):
 	var changed = true
 	while changed:
@@ -1108,8 +1489,6 @@ func _get_room_by_name(n: String):
 		if r.room_name == n: return r
 	return null
 
-	
-
 func area_to_width_and_length(min_area, max_area, ratio_limit = [3,1]) -> Array:
 	var target_area = randi_range(min_area, max_area) 
 	var aspect_ratio = randf_range(ratio_limit[0], ratio_limit[1])
@@ -1138,19 +1517,86 @@ func draw_symmetrical_segment(origin: Vector3, inset: int, width: int, length: i
 	draw_line(length, Vector3.BACK, origin + Vector3(inset, 0, 0)) 
 	draw_line(length, Vector3.BACK, origin + Vector3(width - inset - 1, 0, 0)) 
 	
-func draw_asymmetrical_segment(origin: Vector3, width: int, length: int, inset: int) -> void:
+func draw_asymmetrical_segment(origin: Vector3, inset: int, width: int, length: int) -> void:
 	draw_line(width, Vector3.RIGHT, origin) # horizontal divider
 	draw_line(length, Vector3.BACK, origin + Vector3(inset, 0, 0)) # vertical divider at inset
 
 func draw_line(amount, direction, origin):
-	for i in range(amount):
-		#the room height adjustment is cause the tiles are currently 2 units tall
-		corridor_map.set_cell_item(origin/Vector3(1,room_height,1)+(direction*i), 1)
-
+	var dir_2d = Vector2(direction.x, direction.z)
+	var origin_2d = Vector2(origin.x, origin.z)
+	var to_place : Array = []
 	
+	GridMapAutotiler.target_layer = origin.y / room_height
+	
+	var use_ghosts
+	# 1. Determine if this direction needs the "Ghost Fix"
+	# (Matches your logic for horizontal corridors)
+	if direction == Vector3.RIGHT :
+		use_ghosts = true
+		
+	# 2. Set loop range based on whether we need ghosts
+	var start_idx = -1 if use_ghosts else 0
+	var end_idx = amount 
+
+	for i in range(start_idx, end_idx + 1):
+		to_place.append(origin_2d + (dir_2d * i))
+		
+	# 3. Place the path
+	GridMapAutotiler.set_cells_terrain_path(to_place, 0, 0, true)
+	
+	# 4. Perform the "Open-End" cleanup ONLY if we used ghosts
+	if use_ghosts:
+		var real_start_pos = origin_2d
+		var real_end_pos = origin_2d + (dir_2d * (amount - 1))
+		var ghost_start_pos = origin_2d - dir_2d
+		var ghost_end_pos = origin_2d + (dir_2d * amount)
+
+		# Snapshot the "open" look while ghosts exist
+		var start_data = _get_tile_data(real_start_pos)
+		var end_data = _get_tile_data(real_end_pos)
+
+		# Delete the ghosts
+		GridMapAutotiler.set_cell(ghost_start_pos, -1)
+		GridMapAutotiler.set_cell(ghost_end_pos, -1)
+
+		# Force the real ends to keep that open appearance
+		_set_tile_data(real_start_pos, start_data)
+		_set_tile_data(real_end_pos, end_data)
+		
+# Helper to capture full tile state
+func _get_tile_data(pos: Vector2):
+	return {
+		"id": GridMapAutotiler.get_cell_source_id(pos),
+		"atlas": GridMapAutotiler.get_cell_atlas_coords(pos),
+		"alt": GridMapAutotiler.get_cell_alternative_tile(pos)
+	}
+
+# Helper to force-apply tile state
+func _set_tile_data(pos: Vector2, data: Dictionary):
+	GridMapAutotiler.set_cell(pos, data.id, data.atlas, data.alt)
+
 func draw_box(x, z, width, length, origin):
-	#counting down on the z, and up on the x
-	var our_origin =  Vector3(x, origin.y, z)
-	for zed in range(length):
-		for ecs in range(width):
-			corridor_map.set_cell_item(Vector3(our_origin.x+ecs, our_origin.y/(room_height), our_origin.z+zed), 0)
+	var to_place : Array = []
+	var to_connect : Array = []
+	GridMapAutotiler.target_layer = origin / room_height
+
+	for i in range(width - 1, -1, -1): # Top row: (W-1, 0) -> (0, 0)
+		to_place.append(Vector2(x + i, z))
+		
+	for i in range(1, length): # Left column: (0, 1) -> (0, L-1)
+		to_place.append(Vector2(x, z + i))
+
+	for zed in range(length - 1, 0, -1):
+		var x_range = range(1, width)
+		if (length - 1 - zed) % 2 != 0:
+			x_range.reverse()
+			
+		for ecs in x_range:
+			var pos = Vector2(x + ecs, z + zed)
+			to_place.append(pos)
+			to_connect.append(pos)
+
+	# Execute
+	GridMapAutotiler.set_cells_terrain_path(to_place, 0, 0, true)
+	if to_connect.size() > 0:
+		GridMapAutotiler.set_cells_terrain_connect(to_connect, 0, 0, false)
