@@ -93,58 +93,71 @@ func sum(list):
 		my_sum += item
 	return my_sum
 
+
 class RoomInfo:
-	var room_name;
-	#building it
-	var min_size;
-	var max_size;
-	var can_be_complex_room; # Can be a larger room, containing subrooms
-	var needs_external_access; # Needs to be on the ship wall
-	var needs_wall; # For when we want open spaces with tables in them
-	var can_be_sub_room; # Can be a part of a larger room
-	var is_secure_room; # Indicates if the room is a secure room # could be building if this changes placement
-	var no_door; # Indicates if the room has no door
-	var has_divider; # Indicates if the room can have a divider
-	var allowable_sub_rooms; # List of allowable subrooms
-	var adjacent_room_requirements; # List of rooms that need to be adjacent
-	var allowable_props; # List of allowable props in the room
-	var placement_data; # Orientation and positioning value # now vestigial
-	var room_class; # Room classification or vibe
-	var population_threshold; # Population threshold for requiring additional rooms
-
-	func _init(room_name, min_size, max_size, can_be_complex_room, needs_external_access, needs_wall, can_be_sub_room, is_secure_room, no_door, has_divider, allowable_props, adjacent_room_requirements, allowable_sub_rooms, orientation, room_class, population_threshold):
+	func _init(room_name, room_class, can_be_multi_floor, min_size, max_size, needs_external_access, has_secure_doors, needs_wall, population_threshold, can_have_toilet, can_have_locker, required_decorative_prop_classes, allowable_decorative_prop_classes, is_control_room, adjacent_room_requirements, has_divider):
 		self.room_name = room_name
-		self.min_size = min_size
-		self.max_size = max_size
-		self.can_be_complex_room = can_be_complex_room
-		self.needs_external_access = needs_external_access
-		self.needs_wall = needs_wall
-		self.can_be_sub_room = can_be_sub_room
-		self.is_secure_room = is_secure_room
-		self.no_door = no_door
-		self.has_divider = has_divider
-		self.allowable_props = allowable_props
-		self.adjacent_room_requirements = adjacent_room_requirements
-		self.allowable_sub_rooms = allowable_sub_rooms
-		self.placement_data = placement_data
 		self.room_class = room_class
-		self.population_threshold = population_threshold
-		
-class ShipInfo:
-	var ship_class = ""
-	var min_size = 0
-	var max_size = 0
-	var population_density = 0
-	var ratio_lims = []
-	var required_rooms = []
-	var banned_rooms = []
-	var required_room_classes = []
-	var optional_room_classes = []
-
-	func _init(ship_class, min_size, max_size, population_density, ratio_lims, required_rooms, banned_rooms, required_room_classes, optional_room_classes):
-		self.ship_class = ship_class
-		self.min_size = min_size
+		self.can_be_multi_floor = can_be_multi_floor
+		self.min_size = min_size 
 		self.max_size = max_size
+		self.needs_external_access = needs_external_access
+		self.has_secure_doors = has_secure_doors
+		self.needs_wall = needs_wall
+		self.population_threshold = population_threshold
+		#props
+		self.can_have_toilet = can_have_toilet
+		self.can_have_locker = can_have_locker 
+		self.required_decorative_prop_classes = required_decorative_prop_classes
+		self.allowable_decorative_prop_classes = allowable_decorative_prop_classes
+		self.is_control_room = is_control_room
+		#adjacency rules
+		self.adjacent_room_requirements = adjacent_room_requirements
+		self.has_divider = has_divider
+#second definitions for adjacency i think
+#define room layouts
+#
+		
+# Define room array
+var all_rooms = [
+	#style rooms
+	RoomInfo.new("SleepingQuarters", "Personnel", false, 4, 24, false, false, true, 2, true, true, ["Beds"],["Tables_And_Chairs", "Screens"], false, [], false),
+	RoomInfo.new("MessHall", "Personnel", false, 4, 48, false, false, false, 30, false, false, ["Tables_And_Chairs"],[], false, ["Kitchen"], false),
+	RoomInfo.new("Kitchen", "Personnel", false, 4, 48, false, false, true, 30, false, true, ["Cooking"],[], false, ["MessHall"], true),
+	RoomInfo.new("Jail", "Secure", false, 4, 40, false, true, true, 20, false, false, ["Beds", "Toilets"],["Posters"], false, ["Security"], false),
+	RoomInfo.new("SmallStorage", "Storage", false, 2, 12, false, false, true, 12, false, false, ["Storage"],[], false, [], false),
+	RoomInfo.new("Greenhouse", "Production", false, 6, 72, true, false, true, 10, false, false, ["Farms"], [], false, [], false),
+	RoomInfo.new("Laboratory", "Production", false, 8, 32, false, false, true, 10, false, true, ["Tables_And_Chairs", "Science"], ["Posters", "Medical"], false, [], false),
+	RoomInfo.new("Armory", "Secure", false, 4, 40, false, true, true, 40, false, true, ["Tables_And_Chairs", "Storage"], [], false, [], false),
+	RoomInfo.new("Lounge", "Personnel", false, 4, 32, false, false, false, 10, false, true, ["Tables_And_Chairs"],["Cooking"], false, [], false),
+	RoomInfo.new("Office", "Personnel", false, 4, 12, false, false, true, 6, false, false, ["Tables_And_Chairs", "Computers"], ["Posters"], false, [], false),
+	RoomInfo.new("Medical", "Personnel", false, 4, 32, false, false, true, 15, false, true, ["Tables_And_Chairs", "Medical"], ["Posters"], false, [], false),
+	RoomInfo.new("RepairBay", "Maintenance", false, 6, 24, false, false, false, 16, false, false, ["Tables_And_Chairs", "Tools", "Posters"], [], false, [], false ),
+	RoomInfo.new("Workshop", "Maintenance", false, 4, 32, false, true, false, 16, true, true, ["Tables_And_Chairs", "Tools"], ["Posters"], false, [], false),
+	RoomInfo.new("Thruster", "Propulsion", false, 4, 200, true, false, false, 60, false, false, ["Thrusters"], ["Tables_And_chairs"], false, [], false),
+	RoomInfo.new("RepairBay", 6, 24, true, false, true, false, false, false, false, [], [], [], "", ["Repair"], 16),
+	RoomInfo.new("Workshop", 4, 32, true, false, true, true, false, false, true, ["Workbench", "ToolRack"], [], [], "", ["Repair"], 16),
+
+	#control rooms
+	RoomInfo.new("Bridge", "Control", false, 8, 64, true, true, true, 10000, false, false, ["Tables_And_Chairs", "Screens", "Controls"], [], true, [], false),
+	RoomInfo.new("Generator", "Control", false, 8, 64, false, true, true, 10000, false, false, ["IndustrialMachines", "Controls"], [], true, [], false),
+	RoomInfo.new("Security", "Control", false, 4, 40, false, true, true, 20, false, false, ["Tables_And_Chairs", "Screens", "Controls"], [], true, [], false),
+	RoomInfo.new("GunneryControl", "Combat", false, 4, 12, true, true, true, 10000, false, false, ["Tables_And_Chairs", "Screens", "Controls"], [], true, [], false),
+
+	#movingparts
+	RoomInfo.new("TrashCompactor", "Storage", false, 4, 24, true, false, true, 25, false, false, ["Conveyer", "Crusher"],[], false, [], false),
+	RoomInfo.new("EscapePod", "Personnel", false, 6, 6, true, false, true, 5, false, false, [], [], false, [], false),
+	RoomInfo.new("Cargo", "Storage", true, 12, 304, true, true, true, 40, false, false, ["BigStorage"],["Storage"], false, [], false),
+	RoomInfo.new("Hangar", "Combat", true, 21, 200, true, false, false, 80, false, true, ["Ships"], [], false, [], false)
+]
+
+class ShipInfo:
+	func _init(ship_class, min_width, max_width, min_length, max_length, population_density, ratio_lims, required_rooms, banned_rooms, required_room_classes, optional_room_classes):
+		self.ship_class = ship_class
+		self.min_width = min_width
+		self.max_width = max_width
+		self.min_length = min_length
+		self.max_length = max_length
 		self.population_density = population_density
 		self.ratio_lims = ratio_lims
 		self.required_rooms = required_rooms
@@ -152,55 +165,42 @@ class ShipInfo:
 		self.required_room_classes = required_room_classes
 		self.optional_room_classes = optional_room_classes
 		
-# Define room array
-var all_rooms = [
-	RoomInfo.new("Empty", 1, 20, false, false, false, false, false, false, false, [], [], [], "", ["Meta"], -1),
-	RoomInfo.new("SleepingQuarters", 4, 24, true, false, true, false, false, false, false, [], [], [], "", ["Personnel"], 2),
-	RoomInfo.new("MessHall", 4, 48, false, false, false, false, false, false, true, [], [], [], "", ["Personnel"], 30),
-	RoomInfo.new("Kitchen", 4, 48, false, false, true, false, false, false, true, [], ["MessHall"], [], "", ["Personnel"], 30),
-	RoomInfo.new("Cargo", 12, 304, false, true, true, false, true, false, false, [], [], [], "", ["Transportation"], 30), #in a manner of speaking this does need external access, also consider a secure room variable - bulkhead shit
-	RoomInfo.new("SmallStorage", 2, 12, false, false, true, true, false, false, false, [], [], [], "", ["Utility"], 4),
-	RoomInfo.new("Hangar", 15, 1300, false, true, true, false, false, false, false, [], [], [], "", ["Transportation"], 80),
-	RoomInfo.new("Factory", 16, 400, false, false, true, false, true, false, false, [], [], [], "",["Production"], 30),
-	RoomInfo.new("Airlock", 1, 16, false, true, true, false, true, false, false, [], [], [], "", ["Access"], 10),
-	RoomInfo.new("GreenHouse", 6, 72, true, false, true, false, false, false, false, [], [], [], "", ["Production"], 10),
-	RoomInfo.new("GunneryControl", 4, 12, false, false, true, true, true, false, false, [], [], [], "", ["Combat"], 30),
-	RoomInfo.new("BayGunnery", 2, 32, false, true, true, false, true, true, false, [], ["GunneryControl"], [], "", ["Combat"], 30), #not to mention we need a way to define what props could go in each room
-	RoomInfo.new("Laboratory", 8, 32, true, false, true, false, true, false, false, [], [], [], "", ["Production"], 10),
-	RoomInfo.new("TrashCompactor", 4, 24, false, true, true, false, true, false, false, [], [], [], "", ["Utility"], 25),
-	RoomInfo.new("Lounge", 4, 32, true, false, false, false, false, false, false, [], [], [], "", ["Personnel"], 10), #this should not be the subroom for the prison
-	RoomInfo.new("Fresher", 1, 12, false, false, true, true, false, false, false, [], [], [], "", ["Personnel"], 5),
-	RoomInfo.new("Locker", 1, 2, false, false, true, true, false, false, false, [], [], [], "", ["Personnel"], 1),
-	RoomInfo.new("Office", 4, 12, false, false, true, true, false, false, false, [], [], [], "", ["Administration"], 6),
-	RoomInfo.new("EscapePod", 6, 12, false, true, true, true, true, false, false, [], [], [], "", ["Personnel"], 5),
-	RoomInfo.new("Medical", 4, 32, true, false, true, false, false, false, false, [], [], [], "", ["Personnel"], 15),
-	RoomInfo.new("Bridge", 8, 64, true, true, true, false, true, false, false, [], [], [], "", ["Control"], 1000),
-	RoomInfo.new("Fuel", 4, 16, false, false, true, false, false, true, false, [], [], [], "", ["Propulsion"], 4),
-	RoomInfo.new("Security", 4, 40, true, false, true, false, true, false, false, [], [], [], "", ["Secure"], 4),
-	RoomInfo.new("Prison", 2, 6, false, false, true, true, true, true, false, [], ["Security"], [], "", ["Secure"], 4), #yeah making sure some rooms are more secure would be cool, also forcing them to only spawn as subrooms maybe? also this wouldn't have an office as a subroom? maybe a locker and or a fresher, but we need a way to indicate that.
-	RoomInfo.new("RepairBay", 6, 24, true, false, true, false, false, false, false, [], [], [], "", ["Repair"], 16),
-	RoomInfo.new("Workshop", 4, 32, true, false, true, true, false, false, true, ["Workbench", "ToolRack"], [], [], "", ["Repair"], 16),
-	RoomInfo.new("Engineering", 4, 200, true, true, true, false, false, false, false, [], [], [], "", ["Propulsion"], 60) #subrooms have to be smaller than parent - use the parents max size for this, maybe a way to have gaurenteed sub rooms - or at least more likely (repair bay, workshop)
-]
-
-var connectionmap = [
-	["Office", "Greenhouse", "SleepingQuarters"],
-	["Workshop","RepairBay", "Factory", "Hangar"],
-	["Security","Lounge", "GunneryControl", "Office"],
-	["SmallStorage", "TrashCompactor", "Cargo"],
-	["Kitchen", "SmallStorage"],
-	["Messhall", "Lounge", "Greenhouse", "SmallStorage"],
-	["Medical", "SmallStorage","Laboratory"],
-	["Lounge","Medical","Office"],
-	["Laboratory", "Lounge"]
-]
-
 #required classes, and optional classes.
 #higher density is lower, it's how many tiles are required for a ship to have +1 person
 var ship_setups = [
-	ShipInfo.new("Transporter", 83, 378, 19, [1, 2],  ["SmallStorage", "Bridge", "Airlock"], ["", ""], ["Personnel", "Propulsion", "Transportation"], ["", "", ""]),
-	ShipInfo.new("Production", 80, 200, 9, [1, 2.5], ["Factory", "Airlock", "Bridge", "Lounge"], ["BayGunnery", ""], ["Repair", "Utility", ""], ["Production", "Personnel", "Propulsion"]),
-	ShipInfo.new("Combat", 75, 500, 13, [1, 3], ["Bridge", "Airlock", ""], ["EscapePod", "Lounge", ""], ["Combat", "Propulsion", "Personnel"], ["Secure", "Utility", "Transportation"]),
-	ShipInfo.new("Research", 100, 300, 23, [1, 2], ["Laboratory", "Medical", "Airlock", "Bridge"], ["", "", ""], ["Personnel", "", ""], ["Secure", "Propulsion", "Utility", "Administration"]),
-	ShipInfo.new("Auxiliary", 3, 20, 3, [1, 3], ["Bridge", "Airlock", ""], ["Personnel", "", ""], ["", "Propulsion", ""], ["Utility"])
+	ShipInfo.new("Transporter", 10, 20, 20, 40, 19, [1, 2],  ["SmallStorage", "Bridge", "Airlock"], ["", ""], ["Personnel", "Propulsion", "Transportation"], ["", "", ""]),
+	ShipInfo.new("Production", 15, 40, 30, 60, 9, [1, 2], ["Factory", "Airlock", "Bridge", "Lounge"], ["BayGunnery", ""], ["Repair", "Utility", ""], ["Production", "Personnel", "Propulsion"]),
+	ShipInfo.new("Combat", 10, 40, 40, 70, 13, [1, 3], ["Bridge", "Airlock", ""], ["EscapePod", "Lounge", ""], ["Combat", "Propulsion", "Personnel"], ["Secure", "Utility", "Transportation"]),
+	ShipInfo.new("Research", 20, 60, 20, 60, 23, [1, 1], ["Laboratory", "Medical", "Airlock", "Bridge"], ["", "", ""], ["Personnel", "", ""], ["Secure", "Propulsion", "Utility", "Administration"]),
+	#ShipInfo.new("Auxiliary", 3, 8, 6, 20, 20, [1, 3], ["Bridge", "Airlock", ""], ["Personnel", "", ""], ["", "Propulsion", ""], ["Utility"]),
+	#ShipInfo.new("Station", 20, 40, 20, 40, 14, [1, 1], ["Bridge", "Airlock", ""], ["Personnel", "", ""], ["", "Propulsion", ""], ["Utility"])
+]
+
+class blockInfo:
+	func _init(blockClass,can_be_secure, required_rooms,optional_rooms, big_room):
+		self.blockClass = blockClass
+		self.can_be_secure = can_be_secure
+		self.required_rooms = required_rooms
+		self.optional_rooms = optional_rooms
+		self.big_room = big_room
+		
+var block_classes = [
+	#propulsion - big prop space/thruster, repair area, workshop,
+	blockInfo.new("Propulsion", false, [], ["RepairBay", "Workshop"], "Thruster"),
+	#bridge - computer, bridgeroom, escape_pods, workshop, smallstorage, bedrooms, gunnery?
+	blockInfo.new("Bridge", true, ["Bridge"], ["EscapePod", "Office", "Workshop", "SmallStorage", "SleepingQuarters", "GunneryControl","Cartography", "Transporter"], ""),
+	#storage - big prop space/cargo, smallstorage, office
+	blockInfo.new("Storage", false, [], ["SmallStorage", "Office", "TrashCompactor"], "Cargo"),
+	#engine - big prop space/engine, workshop, office, 
+	blockInfo.new("Engine", false, [], ["Workshop", "Office"], "Generator"),
+	#combat - might be armory/security, launch bay/hangar, briefing rooms, bedrooms, repairbay, gunnery, storage, lounge, office
+	blockInfo.new("Combat", true, ["Security"], ["Hangar", "Office", "GunneryControl", "Armory", "SleepingQuarters", "RepairBay, Lounge, SmallStorage"], ""),
+	#landing - big prop space/hangar, maybe an office, a repairbay, some storage, 
+	blockInfo.new("Landing", false, [], ["Office", "RepairBay", "SmallStorage"], "Hangar"),
+	#personnel - bedrooms, messhall, storage, kitchen, laundry, medical, 
+	blockInfo.new("Personnel", false, ["SleepingQuarters", "Kitchen","Lounge", "EscapePod"],["Medical", "Laundry","Messhall","SmallStorage"],""),
+	#cell
+	blockInfo.new("Cell", true, ["Jail", "Security"], ["Medical", "Hangar", "Office", "Transporter"], ""),
+	#production
+	blockInfo.new("Production", false, [], ["Laboratory", "Greenhouse", "Office", "SmallStorage", "TrashCompactor"], ""),
 ]

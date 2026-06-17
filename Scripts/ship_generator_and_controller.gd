@@ -25,9 +25,8 @@ func _ready():
 	null
 	# Select random ship type and define levels
 	var selected_ship = Global.ship_setups[randi_range(0, Global.ship_setups.size() - 1)]
-	var width_and_length = area_to_width_and_length(selected_ship.min_size, selected_ship.max_size, selected_ship.ratio_lims)
-	var ship_z_size = max(ceil(width_and_length[0]), 3)
-	var ship_x_size = max(ceil(width_and_length[1]), 3)
+	var ship_z_size = max((round(randi_range(selected_ship.min_length, selected_ship.max_length)/10)*10), 10)
+	var ship_x_size = max((round(randi_range(selected_ship.min_width, selected_ship.max_width)/10)*10), 10)
 	
 	#used for snapping eventually.
 	#var ship_levels = randi_range(1, 3)
@@ -36,33 +35,45 @@ func _ready():
 	build_ship(ship_x_size, ship_z_size, selected_ship)
 	
 func build_ship(x_size, z_size, ship_type):
-
-	var origin = Vector3.ZERO # center
-	max_width = z_size #sqrt(Global.sum(room_quantity.values()))+ship_x_size
-	max_length = x_size
+	var origin = Vector3.ZERO #corner, expanding in positive directions
+	var full_width = z_size #sqrt(Global.sum(room_quantity.values()))+ship_x_size
+	var full_length = x_size
 	
 	
-	print("max width: "+ str(max_width))
-	print("max length: "+ str(max_length))
+	print("max width: "+ str(full_width))
+	print("max length: "+ str(full_length))
 	var floor_sizes: Array = []
 	var floor_areas_for_room_so_i_can_skip_the_computation: Array = []
-	var area = x_size * z_size
-	var base_floor_count = round(clamp(area / 125.0, 1, 3))
-	var floor_count = base_floor_count if x_size >= 5 else max(1, base_floor_count - 1)
-	print("floors " + str(floor_count))
-	for floor in range(floor_count):
-		var floor_width = max_width
-		var floor_length = max_length
-		
+	var ship_total_area = x_size * z_size
+	var base_floor_count = round(clamp(ship_total_area / 140.0, 1, 3)) 
+	if not full_length > full_width:
+		base_floor_count = 1
+	print("floors " + str(base_floor_count))
+	for floor in range(base_floor_count):
+		var floor_width = full_width
+		var floor_length = full_length
+		#very stupid - basically relying on there only ever being 3 floors at most 
+		if base_floor_count > 1:
+			floor_length = max(full_length-((floor%2)*(10 if randf()>0.5 else 20)),10)
+		if base_floor_count > 1:
+			floor_length = max(full_length-((floor%2)*(0 if randf()>0.5 else 10)),10)
 		floor_sizes.append(Vector3(floor_width, 0, floor_length))
-		floor_areas_for_room_so_i_can_skip_the_computation.append(floor_width * floor_length)
 
-	var room_quantity = room_quantities(z_size, x_size, ship_type, floor_count, floor_areas_for_room_so_i_can_skip_the_computation)
+	var room_quantities = room_quantities(z_size, x_size, ship_type, base_floor_count, floor_sizes)
 
-	for i in range(floor_count):
+	for i in range(base_floor_count):
 		var y_offset = i * room_height
 		var floor_origin = origin + Vector3(0, y_offset, 0)
-		build_floor(floor_origin, ship_type, i, room_quantity[i], floor_sizes[i])
+		build_floor(floor_origin, ship_type, i, room_quantities[i], floor_sizes[i])
+	#so ! building blocks . we need to determine multi_floor stuff early, and stair locations
+	#and whatnot
+	#stairs are a room, as is elevator, and ladder? no ladder can be latebuild
+	#but we do need to plan the blocks across multiple floors here  which is a shame
+	
+
+#for rooms here, i want not numbers, just allowed rooms. then let it populate until
+func build_block(origin, width, length, block_rooms):
+	pass
 
 	
 func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
@@ -494,21 +505,19 @@ func build_floor(origin, ship_type, floor_number, floor_rooms, dimensions):
 	#extra room builder/improved populate function that only runs here?
 	spawned_room_list.sort_custom(custom_room_sort)
 	pass #to be written check empty spaces, fill em up with Sci Fi Stuff
-	#self divide room portion sizes 
-	pass # to be written #should just be 2x2 in most cases, but we've needed to rework the room variables for a while anyway lol
 		#next on the list:--------------------------------
+		#reworking room code guide
+		#we need to be doing the "subdivision of rooms" during the first build
+		#and we don't want empty spaces
+		#and we want blocks
+		#and then we can populate them with props without blocking doors
+		#we also don't want the current systems for engineering and bridge
 		
-		#segment placed rooms if they're over max_size - only internally, tie to inter - room connection system
-		#build rooms internal inc engineering + bridge
-		#place fresher + locker in other rooms - ensure consistency with room connection tree
-		#place airlock at corridor ends - ban doors at airlock ends - probably do as room for door building and deco
-		#place fuel in empty spaces - get list of empty spaces, fill em up
-		#segment right sized rooms into portions - e.g escape pods in an escapepod room
-	#for placing rooms: rooms,fixsmall, corridors,doors
-	#end
-	
+	#for placing rooms: rooms, connectiontile placement in small rooms, corridors,doors
+		
 	GridMapAutotiler._set_gridmap_tiles_impl()
 	GridMapAutotiler.clear()
+	
 	
 func _has_corridor_access(room) -> bool:
 	var rx = roundi(room.position.x)
@@ -1489,13 +1498,7 @@ func _get_room_by_name(n: String):
 		if r.room_name == n: return r
 	return null
 
-func area_to_width_and_length(min_area, max_area, ratio_limit = [3,1]) -> Array:
-	var target_area = randi_range(min_area, max_area) 
-	var aspect_ratio = randf_range(ratio_limit[0], ratio_limit[1])
-	var length = sqrt(target_area * aspect_ratio)
-	var width = target_area / length
-	
-	return [width, length]
+
 
 func custom_room_sort(a, b):
 	return a.info.max_size > b.info.max_size;
